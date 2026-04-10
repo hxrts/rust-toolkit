@@ -66,6 +66,9 @@
           dylint_repo="''${XDG_CACHE_HOME:-$HOME/.cache}/toolkit/dylint"
           dylint_rev="4bd91ce7729b74c7ee5664bbb588f7baf30b4a09"
           git_bin="${pkgs.git}/bin/git"
+          host="$(${rustToolchainNightly}/bin/rustc -vV | awk '/^host: / { print $2 }')"
+          toolchain_name="toolkit-nightly-''${host}"
+          toolchain_root="${rustToolchainNightly}"
 
           mkdir -p "$(dirname "$dylint_repo")"
           if [ ! -d "$dylint_repo/.git" ]; then
@@ -74,16 +77,18 @@
           "$git_bin" -C "$dylint_repo" fetch --tags origin
           "$git_bin" -C "$dylint_repo" checkout --force "$dylint_rev"
 
-          export PATH="$HOME/.cargo/bin:$PATH"
+          ${pkgs.rustup}/bin/rustup toolchain remove "$toolchain_name" >/dev/null 2>&1 || true
+          ${pkgs.rustup}/bin/rustup toolchain link "$toolchain_name" "$toolchain_root"
+
+          # Keep the pinned nightly ahead of rustup shims for cargo-install builds.
+          export PATH="${rustToolchainNightly}/bin:$HOME/.cargo/bin:$PATH"
+          export CARGO="${rustToolchainNightly}/bin/cargo"
+          export RUSTC="${rustToolchainNightly}/bin/rustc"
+          export RUSTDOC="${rustToolchainNightly}/bin/rustdoc"
+          export RUSTUP_TOOLCHAIN="$toolchain_name"
           ${rustToolchainNightly}/bin/cargo install --locked --force --path "$dylint_repo/cargo-dylint"
           ${rustToolchainNightly}/bin/cargo install --locked --force --path "$dylint_repo/dylint-link"
 
-          host="$(${rustToolchainNightly}/bin/rustc -vV | awk '/^host: / { print $2 }')"
-          toolchain_name="toolkit-nightly-''${host}"
-          toolchain_root="${rustToolchainNightly}"
-
-          ${pkgs.rustup}/bin/rustup toolchain remove "$toolchain_name" >/dev/null 2>&1 || true
-          ${pkgs.rustup}/bin/rustup toolchain link "$toolchain_name" "$toolchain_root"
           if [ -n "$toolkit_root" ] && [ -d "$toolkit_root/lints" ]; then
             (
               cd "$toolkit_root/lints"
