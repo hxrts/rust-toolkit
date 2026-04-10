@@ -46,11 +46,12 @@
         toolkitXtask = pkgs.writeShellScriptBin "toolkit-xtask" ''
           set -euo pipefail
           toolkit_root="''${TOOLKIT_ROOT:-}"
-          target_dir="''${XDG_CACHE_HOME:-$HOME/.cache}/toolkit/xtask-target"
           if [ -z "$toolkit_root" ]; then
             echo "toolkit-xtask requires TOOLKIT_ROOT" >&2
             exit 1
           fi
+          target_key="$(basename "$toolkit_root" | tr -cs 'A-Za-z0-9._-' '_')"
+          target_dir="''${XDG_CACHE_HOME:-$HOME/.cache}/toolkit/xtask-target/$target_key"
           mkdir -p "$target_dir"
           exec ${rustToolchainNightly}/bin/cargo run --target-dir "$target_dir" --manifest-path "$toolkit_root/xtask/Cargo.toml" -- "$@"
         '';
@@ -243,7 +244,7 @@ EOF
           }
           trap cleanup EXIT
 
-          exec ${rustToolchainNightly}/bin/cargo dylint --path "$resolved_lint_path" "$@"
+          ${rustToolchainNightly}/bin/cargo dylint --path "$resolved_lint_path" "$@"
         '';
 
         toolkitPackages = {
