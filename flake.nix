@@ -1,5 +1,5 @@
 {
-  description = "Toolkit nightly tooling shell for formatter and dylint validation";
+  description = "Reusable Rust policy tooling and command surface";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -9,6 +9,7 @@
 
   outputs =
     {
+      self,
       nixpkgs,
       rust-overlay,
       flake-utils,
@@ -35,20 +36,23 @@
         cargoWrapper = pkgs.writeShellScriptBin "cargo" ''
           set -euo pipefail
           if [ -z "''${RUSTUP_TOOLCHAIN:-}" ]; then
-            host="$(rustc -vV | awk '/^host: / { print $2 }')"
+            host="$(${rustToolchainNightly}/bin/rustc -vV | awk '/^host: / { print $2 }')"
             export RUSTUP_TOOLCHAIN="toolkit-nightly-''${host}"
           fi
-          exec "$HOME/.cargo/bin/cargo" "$@"
+          export PATH="$HOME/.cargo/bin:$PATH"
+          exec ${rustToolchainNightly}/bin/cargo "$@"
         '';
 
         toolkitXtask = pkgs.writeShellScriptBin "toolkit-xtask" ''
           set -euo pipefail
           toolkit_root="''${TOOLKIT_ROOT:-}"
+          target_dir="''${XDG_CACHE_HOME:-$HOME/.cache}/toolkit/xtask-target"
           if [ -z "$toolkit_root" ]; then
             echo "toolkit-xtask requires TOOLKIT_ROOT" >&2
             exit 1
           fi
-          exec "$HOME/.cargo/bin/cargo" run --manifest-path "$toolkit_root/xtask/Cargo.toml" -- "$@"
+          mkdir -p "$target_dir"
+          exec ${rustToolchainNightly}/bin/cargo run --target-dir "$target_dir" --manifest-path "$toolkit_root/xtask/Cargo.toml" -- "$@"
         '';
 
         installDylint = pkgs.writeShellScriptBin "toolkit-install-dylint" ''
@@ -56,30 +60,40 @@
           toolkit_root="''${TOOLKIT_ROOT:-}"
           dylint_repo="''${XDG_CACHE_HOME:-$HOME/.cache}/toolkit/dylint"
           dylint_rev="4bd91ce7729b74c7ee5664bbb588f7baf30b4a09"
+          git_bin="${pkgs.git}/bin/git"
+
           mkdir -p "$(dirname "$dylint_repo")"
           if [ ! -d "$dylint_repo/.git" ]; then
-            git clone https://github.com/trailofbits/dylint.git "$dylint_repo"
+            "$git_bin" clone https://github.com/trailofbits/dylint.git "$dylint_repo"
           fi
-          git -C "$dylint_repo" fetch --tags origin
-          git -C "$dylint_repo" checkout --force "$dylint_rev"
+          "$git_bin" -C "$dylint_repo" fetch --tags origin
+          "$git_bin" -C "$dylint_repo" checkout --force "$dylint_rev"
+
+          export PATH="$HOME/.cargo/bin:$PATH"
           ${rustToolchainNightly}/bin/cargo install --locked --force --path "$dylint_repo/cargo-dylint"
           ${rustToolchainNightly}/bin/cargo install --locked --force --path "$dylint_repo/dylint-link"
-          host="$(rustc -vV | awk '/^host: / { print $2 }')"
+
+          host="$(${rustToolchainNightly}/bin/rustc -vV | awk '/^host: / { print $2 }')"
           toolchain_name="toolkit-nightly-''${host}"
-          toolchain_root="$(dirname "$(dirname "$(command -v rustc)")")"
-          rustup toolchain remove "$toolchain_name" >/dev/null 2>&1 || true
-          rustup toolchain link "$toolchain_name" "$toolchain_root"
+          toolchain_root="${rustToolchainNightly}"
+
+          ${pkgs.rustup}/bin/rustup toolchain remove "$toolchain_name" >/dev/null 2>&1 || true
+          ${pkgs.rustup}/bin/rustup toolchain link "$toolchain_name" "$toolchain_root"
           if [ -n "$toolkit_root" ] && [ -d "$toolkit_root/lints" ]; then
-            (cd "$toolkit_root/lints" && rustup override set "$toolchain_name" >/dev/null)
+            (
+              cd "$toolkit_root/lints"
+              ${pkgs.rustup}/bin/rustup override set "$toolchain_name" >/dev/null
+            )
           fi
         '';
 
         dylintLinkWrapper = pkgs.writeShellScriptBin "toolkit-dylint-link" ''
           set -euo pipefail
           if [ -z "''${RUSTUP_TOOLCHAIN:-}" ]; then
-            host="$(rustc -vV | awk '/^host: / { print $2 }')"
+            host="$(${rustToolchainNightly}/bin/rustc -vV | awk '/^host: / { print $2 }')"
             export RUSTUP_TOOLCHAIN="toolkit-nightly-''${host}"
           fi
+          export PATH="$HOME/.cargo/bin:$PATH"
           exec dylint-link "$@"
         '';
 
@@ -185,8 +199,9 @@
           fi
 
           export CARGO_INCREMENTAL="''${CARGO_INCREMENTAL:-0}"
+          export PATH="$HOME/.cargo/bin:$PATH"
 
-          host="$(rustc -vV | awk '/^host: / { print $2 }')"
+          host="$(${rustToolchainNightly}/bin/rustc -vV | awk '/^host: / { print $2 }')"
           toolchain_name="toolkit-nightly-''${host}"
           temp_toolchain_file="$lint_path/rust-toolchain.toml"
           created_temp_toolchain=0
@@ -206,37 +221,45 @@ EOF
           }
           trap cleanup EXIT
 
-          exec cargo dylint --path "$lint_path" "$@"
+          exec ${rustToolchainNightly}/bin/cargo dylint --path "$lint_path" "$@"
         '';
+
+        toolkitPackages = {
+          toolkit-xtask = toolkitXtask;
+          toolkit-install-dylint = installDylint;
+          toolkit-dylint-link = dylintLinkWrapper;
+          toolkit-fmt = toolkitFmt;
+          toolkit-cargo-fmt-nightly = toolkitCargoFmtNightly;
+          toolkit-dylint = toolkitDylint;
+        };
       in
       {
+        packages = toolkitPackages;
+
         devShells.default = pkgs.mkShell {
           packages =
-            with pkgs;
-            [
+            (builtins.attrValues toolkitPackages)
+            ++ (with pkgs; [
               cargoWrapper
-              toolkitXtask
               rustToolchainNightly
-              installDylint
-              dylintLinkWrapper
-              toolkitFmt
-              toolkitCargoFmtNightly
-              toolkitDylint
               git
               just
               ripgrep
               perl
               pkg-config
               openssl
+              rustup
               zlib
-            ]
-            ++ lib.optionals stdenv.isDarwin [
-              libiconv
+            ])
+            ++ pkgs.lib.optionals pkgs.stdenv.isDarwin [
+              pkgs.libiconv
             ];
 
           shellHook = ''
+            export PATH="$HOME/.cargo/bin:$PATH"
+            export TOOLKIT_ROOT="$PWD"
             echo "Toolkit nightly environment"
-            echo "Rust: $(rustc --version)"
+            echo "Rust: $(${rustToolchainNightly}/bin/rustc --version)"
             echo "Run 'toolkit-install-dylint' once in this shell if cargo-dylint is not installed."
           '';
         };

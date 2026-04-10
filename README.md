@@ -12,5 +12,5 @@ Policy machinery:
 - formatter, clippy, and dylint shell support
 
 Consuming repositories keep domain-specific policy in a repo-owned `policy/`
-directory, resolve a pinned toolkit checkout locally, and call the toolkit
-command surface from its Nix shell. See `docs/consuming_repos.md`.
+directory, add the toolkit as a flake input, and call the exported toolkit
+command surface from their default dev shell. See `docs/consuming_repos.md`.

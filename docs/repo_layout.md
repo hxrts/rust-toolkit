@@ -15,9 +15,11 @@ toolkit/
   macros/
   xtask/
   lints/
+    .cargo/
   fixtures/
   docs/
-  nix/
+  flake.nix
+  flake.lock
   config/
 ```
 
@@ -33,15 +35,39 @@ toolkit/
 - `xtask/`
   Generic runner, config loading, source discovery, and reusable checks.
 - `lints/`
-  Portable `dylint` crates and shared dylint support files.
+  Portable `dylint` crates and shared dylint support files. The shared
+  `lints/.cargo/config.toml` wires `toolkit-dylint-link` for non-Windows
+  targets.
 - `fixtures/`
-  Reusable fixture repositories and expected results for validation.
+  Reusable fixture repositories and expected results for validation, including
+  miniature pass/fail repo fixtures for config-driven checks.
 - `docs/`
   Consumer workflow, ownership rules, and contributor guidance.
-- `nix/`
-  Hermetic formatter, clippy, and dylint shell support.
+- `flake.nix`
+  Hermetic nightly tooling and the toolkit command surface:
+  `toolkit-xtask`, `toolkit-fmt`, `toolkit-install-dylint`,
+  `toolkit-dylint`, and `toolkit-dylint-link`.
+- `flake.lock`
+  Pinned toolkit flake dependencies.
 - `config/`
   Notes about shared config schema, defaults, and migration shape.
+
+## Command Ownership
+
+The toolkit repo owns the reusable commands exposed from `flake.nix`:
+
+- `toolkit-xtask`
+- `toolkit-fmt`
+- `toolkit-install-dylint`
+- `toolkit-dylint`
+- `toolkit-dylint-link`
+
+When invoking those commands from the toolkit repo itself, use `nix develop`
+from the repo root. The dev shell exports `TOOLKIT_ROOT` automatically so the
+commands can find the checkout they are supposed to operate on.
+
+The consuming repo should not reimplement those mechanics unless it is fixing a
+toolkit bug temporarily on the way to moving that fix back here.
 
 ## Ownership Rules
 
@@ -50,7 +76,9 @@ This repo owns:
 - generic check semantics
 - generic lint semantics
 - shared tooling shells
+- shared shell commands
 - shared fixture harnesses
+- reusable proc macros and effect-support traits
 
 This repo does not own:
 
@@ -64,5 +92,7 @@ This repo does not own:
 - Prefer config-driven scope over hardcoded exceptions.
 - Keep the toolkit path-independent.
 - Do not assume the checkout lives at `repo/toolkit`.
+- Assume the toolkit is consumed through a flake input plus `TOOLKIT_ROOT`, not
+  through sibling-path dependencies or ad hoc checkout resolvers.
 - Keep `README.md` short and move substantial guidance into `docs/`.
 - Add tests or fixtures when introducing non-trivial enforcement behavior.

@@ -11,6 +11,9 @@ use report::FindingSet;
 const DEFAULT_CONFIG: &str = "policy/toolkit.toml";
 
 fn toolkit_root() -> Result<PathBuf> {
+    if let Some(root) = env::var_os("TOOLKIT_ROOT") {
+        return canonicalize_existing(Path::new(&root));
+    }
     let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     canonicalize_existing(
         manifest_dir
@@ -201,7 +204,7 @@ fn show_config(args: &[String]) -> Result<()> {
 fn run_fmt_check(args: &[String]) -> Result<()> {
     let (repo_root, _) = parse_shared_args(args)?;
     let toolkit_root = toolkit_root()?;
-    let nix_path = format!("path:{}", toolkit_root.join("nix").display());
+    let nix_path = format!("path:{}", toolkit_root.display());
     let status = process::Command::new("nix")
         .args([
             "develop",
@@ -225,7 +228,7 @@ fn run_fmt_check(args: &[String]) -> Result<()> {
 fn run_fmt(args: &[String]) -> Result<()> {
     let (repo_root, _) = parse_shared_args(args)?;
     let toolkit_root = toolkit_root()?;
-    let nix_path = format!("path:{}", toolkit_root.join("nix").display());
+    let nix_path = format!("path:{}", toolkit_root.display());
     let status = process::Command::new("nix")
         .args([
             "develop",
@@ -249,7 +252,7 @@ fn run_fmt(args: &[String]) -> Result<()> {
 fn run_clippy(args: &[String]) -> Result<()> {
     let (repo_root, _) = parse_shared_args(args)?;
     let toolkit_root = toolkit_root()?;
-    let nix_path = format!("path:{}", toolkit_root.join("nix").display());
+    let nix_path = format!("path:{}", toolkit_root.display());
     let status = process::Command::new("nix")
         .args([
             "develop",
@@ -272,7 +275,7 @@ fn run_clippy(args: &[String]) -> Result<()> {
 fn run_dylint(args: &[String]) -> Result<()> {
     let (repo_root, _) = parse_shared_args(args)?;
     let toolkit_root = toolkit_root()?;
-    let nix_path = format!("path:{}", toolkit_root.join("nix").display());
+    let nix_path = format!("path:{}", toolkit_root.display());
     let status = process::Command::new("nix")
         .args([
             "develop",
