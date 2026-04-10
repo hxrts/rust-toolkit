@@ -223,6 +223,7 @@
               cp -R "$lint_path/." "$copied_lint_dir/"
               resolved_lint_path="$copied_lint_dir"
             fi
+            chmod -R u+w "$copied_lint_dir"
           fi
 
           temp_toolchain_file="$resolved_lint_path/rust-toolchain.toml"
