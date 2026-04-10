@@ -203,10 +203,29 @@
 
           host="$(${rustToolchainNightly}/bin/rustc -vV | awk '/^host: / { print $2 }')"
           toolchain_name="toolkit-nightly-''${host}"
-          temp_toolchain_file="$lint_path/rust-toolchain.toml"
+          resolved_lint_path="$lint_path"
+          copied_lint_dir=""
+          temp_toolchain_file=""
           created_temp_toolchain=0
 
-          if [ ! -f "$lint_path/rust-toolchain" ] && [ ! -f "$temp_toolchain_file" ]; then
+          if [ ! -w "$lint_path" ]; then
+            copied_lint_dir="$(mktemp -d "''${TMPDIR:-/tmp}/toolkit-dylint.XXXXXX")"
+            if [ -n "$toolkit_lint" ]; then
+              mkdir -p "$copied_lint_dir/$toolkit_lint"
+              if [ -d "$toolkit_root/lints/.cargo" ]; then
+                mkdir -p "$copied_lint_dir/.cargo"
+                cp -R "$toolkit_root/lints/.cargo/." "$copied_lint_dir/.cargo/"
+              fi
+              cp -R "$lint_path/." "$copied_lint_dir/$toolkit_lint/"
+              resolved_lint_path="$copied_lint_dir/$toolkit_lint"
+            else
+              cp -R "$lint_path/." "$copied_lint_dir/"
+              resolved_lint_path="$copied_lint_dir"
+            fi
+          fi
+
+          temp_toolchain_file="$resolved_lint_path/rust-toolchain.toml"
+          if [ ! -f "$resolved_lint_path/rust-toolchain" ] && [ ! -f "$temp_toolchain_file" ]; then
             cat >"$temp_toolchain_file" <<EOF
 [toolchain]
 channel = "$toolchain_name"
@@ -218,10 +237,13 @@ EOF
             if [ "$created_temp_toolchain" -eq 1 ]; then
               rm -f "$temp_toolchain_file"
             fi
+            if [ -n "$copied_lint_dir" ]; then
+              rm -rf "$copied_lint_dir"
+            fi
           }
           trap cleanup EXIT
 
-          exec ${rustToolchainNightly}/bin/cargo dylint --path "$lint_path" "$@"
+          exec ${rustToolchainNightly}/bin/cargo dylint --path "$resolved_lint_path" "$@"
         '';
 
         toolkitPackages = {

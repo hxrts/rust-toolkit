@@ -88,11 +88,15 @@ fn find_missing_must_use(source: &str) -> Result<Vec<(String, String)>> {
                 .name("attrs")
                 .map(|item| item.as_str())
                 .unwrap_or_default();
+            let method_start = method.get(0).map(|item| item.start()).unwrap_or_default();
+            let window_start = method_start.saturating_sub(4096);
+            let prefix_window = &body[window_start..method_start];
+            let must_use_macro = prefix_window.contains("must_use_evidence!");
             let return_type = method
                 .name("ret")
                 .map(|item| item.as_str())
                 .unwrap_or_default();
-            if attrs.contains("#[must_use") || !contains_result(return_type) {
+            if attrs.contains("#[must_use") || must_use_macro || !contains_result(return_type) {
                 continue;
             }
             let Some(method_name) = method.name("name") else {
