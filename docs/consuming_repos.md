@@ -56,8 +56,8 @@ default dev shell and pass the local config, usually
 3. Add `policy/toolkit.toml`.
 4. Add repo-local `policy/checks/`, `policy/lints/`, `policy/fixtures/`, and
    policy docs only as needed.
-5. Export `TOOLKIT_ROOT` to the toolkit input path from the repo shell.
-6. Add the toolkit command packages to the repo shell.
+5. Import toolkit consumer shell support into the repo shell.
+6. Add the toolkit command packages from that support surface.
 7. Add a tiny `scripts/toolkit-shell.sh` bootstrap.
 8. Run toolkit commands from `just`, CI, and hooks through that bootstrap.
 9. Add domain-specific rules only under `policy/`.
@@ -78,8 +78,8 @@ Inside the toolkit Nix shell, the reusable command surface is:
   Runs either a toolkit-owned lint (`--toolkit-lint <name>`) or a
   consumer-owned lint (`--lint-path <path>`) with the toolkit nightly setup.
 
-Toolkit commands assume the consuming repo has added those packages to its own
-shell and exported `TOOLKIT_ROOT` to the toolkit input path.
+Toolkit commands assume the consuming repo has imported the toolkit consumer
+shell support into its own shell.
 
 ## Recommended Flake Wiring
 
@@ -96,25 +96,51 @@ inputs = {
 };
 ```
 
-and then add the toolkit packages plus:
+and then import the consumer shell support:
 
 ```nix
-shellHook = ''
-  export TOOLKIT_ROOT="${toolkit}"
-'';
+let
+  toolkitSupport = toolkit.lib.${system}.consumerShellSupport;
+in
+pkgs.mkShell {
+  nativeBuildInputs = [
+    rustToolchain
+    pkg-config
+    just
+    perl
+    ripgrep
+  ] ++ toolkitSupport.packages;
+
+  buildInputs = [
+    openssl
+  ] ++ toolkitSupport.buildInputs;
+
+  shellHook = ''
+    ${toolkitSupport.shellHook}
+  '';
+}
 ```
 
 That keeps toolkit versioning repo-owned through the repo's flake lock while
-making the toolkit command surface directly usable from `just`, CI, and hooks.
+making the toolkit command surface directly usable from `just`, CI, and hooks
+without copying toolkit-owned runtime library setup into each consumer.
 
-A minimal shell package set usually includes:
+A minimal toolkit-owned shell surface includes:
 
 ```nix
-toolkit.packages.${system}.toolkit-xtask
-toolkit.packages.${system}.toolkit-fmt
-toolkit.packages.${system}.toolkit-install-dylint
-toolkit.packages.${system}.toolkit-dylint
-toolkit.packages.${system}.toolkit-dylint-link
+toolkit.lib.${system}.consumerShellSupport.packages
+toolkit.lib.${system}.consumerShellSupport.buildInputs
+toolkit.lib.${system}.consumerShellSupport.shellHook
+```
+
+The consumer should still add its own repo-specific toolchain and build inputs.
+
+The shell hook exported by the support surface sets:
+
+```nix
+shellHook = ''
+  ${toolkitSupport.shellHook}
+'';
 ```
 
 ## Copyable Bootstrap Script
@@ -136,33 +162,17 @@ if [ -n "${IN_NIX_SHELL:-}" ] && [ -n "${TOOLKIT_ROOT:-}" ] && command -v toolki
   exec "$@"
 fi
 
-toolkit_flake_ref="$(
-  perl -MJSON::PP -e '
-    my $path = shift;
-    open my $fh, "<", $path or die "failed to open $path: $!";
-    local $/;
-    my $lock = decode_json(<$fh>);
-    my $node = $lock->{nodes}{toolkit}{locked}
-      or die "missing toolkit lock entry\n";
-    die "unsupported toolkit lock type: " . ($node->{type} // q()) . "\n"
-      unless ($node->{type} // q()) eq "github";
-    my $ref = "github:$node->{owner}/$node->{repo}/$node->{rev}";
-    $ref .= "?narHash=$node->{narHash}" if exists $node->{narHash};
-    print $ref;
-  ' "$repo_root/flake.lock"
-)"
-
-exec nix develop "$toolkit_flake_ref" --command "$@"
+exec nix develop --command "$@"
 ```
 
 This wrapper does two things:
 
 - if the caller is already inside the consuming repo's flake shell, it runs the
   toolkit command directly
-- otherwise, it enters the pinned toolkit flake directly from `flake.lock`
+- otherwise, it enters the consuming repo's pinned shell
 
-That second path avoids snapshotting the whole consuming repo as a local flake
-input, which is usually much faster on dirty worktrees.
+That second path keeps CI, `just`, hooks, and local command runs inside the
+same repo-owned shell wiring that already includes toolkit consumer support.
 
 After copying it into `scripts/toolkit-shell.sh`, make it executable:
 
@@ -202,8 +212,8 @@ cargo run --manifest-path policy/xtask/Cargo.toml -- check <name>
 ## Minimal Adoption Checklist
 
 1. Add `toolkit` as a flake input.
-2. Expose toolkit packages from the repo's default shell.
-3. Export `TOOLKIT_ROOT="${toolkit}"` from `shellHook`.
+2. Import `toolkit.lib.${system}.consumerShellSupport` into the repo shell.
+3. Expose toolkit packages from that support surface.
 4. Copy [`docs/toolkit-shell.sh`](./toolkit-shell.sh) to
    `scripts/toolkit-shell.sh`.
 5. `chmod +x scripts/toolkit-shell.sh`.

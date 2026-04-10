@@ -260,34 +260,15 @@ EOF
           toolkit-cargo-fmt-nightly = toolkitCargoFmtNightly;
           toolkit-dylint = toolkitDylint;
         };
-      in
-      {
-        packages = toolkitPackages;
-
-        devShells.default = pkgs.mkShell {
-          packages =
-            (builtins.attrValues toolkitPackages)
-            ++ (with pkgs; [
-              cargoWrapper
-              rustToolchainNightly
-              git
-              just
-              ripgrep
-              perl
-              pkg-config
-              openssl
-              rustup
-              zlib
-            ])
-            ++ pkgs.lib.optionals pkgs.stdenv.isDarwin [
-              pkgs.libiconv
-            ]
-            ++ pkgs.lib.optionals pkgs.stdenv.isLinux [
-              pkgs.dbus
-            ];
-
+        consumerShellSupport = {
+          packages = builtins.attrValues toolkitPackages;
+          buildInputs =
+            with pkgs;
+            [ zlib ]
+            ++ lib.optionals stdenv.isDarwin [ libiconv ]
+            ++ lib.optionals stdenv.isLinux [ dbus ];
           shellHook = ''
-            export PATH="$HOME/.cargo/bin:$PATH"
+            export TOOLKIT_ROOT="${self.outPath}"
             export TOOLKIT_RUNTIME_LIBRARY_PATH="${toolkitRuntimeLibPath}"
             if [ -n "''${LD_LIBRARY_PATH:-}" ]; then
               export LD_LIBRARY_PATH="$TOOLKIT_RUNTIME_LIBRARY_PATH:$LD_LIBRARY_PATH"
@@ -299,6 +280,35 @@ EOF
             else
               export DYLD_LIBRARY_PATH="$TOOLKIT_RUNTIME_LIBRARY_PATH"
             fi
+          '';
+        };
+      in
+      {
+        packages = toolkitPackages;
+        lib = {
+          inherit consumerShellSupport;
+        };
+
+        devShells.default = pkgs.mkShell {
+          packages =
+            consumerShellSupport.packages
+            ++ (with pkgs; [
+              cargoWrapper
+              rustToolchainNightly
+              git
+              just
+              ripgrep
+              perl
+              pkg-config
+              openssl
+              rustup
+            ])
+            ;
+          buildInputs = consumerShellSupport.buildInputs;
+
+          shellHook = ''
+            export PATH="$HOME/.cargo/bin:$PATH"
+            ${consumerShellSupport.shellHook}
             if [ -f "$PWD/flake.nix" ] && [ -d "$PWD/xtask" ] && [ -d "$PWD/lints" ]; then
               export TOOLKIT_ROOT="$PWD"
             else
