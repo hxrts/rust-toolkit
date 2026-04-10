@@ -136,14 +136,38 @@ if [ -n "${IN_NIX_SHELL:-}" ] && [ -n "${TOOLKIT_ROOT:-}" ] && command -v toolki
   exec "$@"
 fi
 
-exec nix develop "path:${repo_root}" --command "$@"
+toolkit_flake_ref="$(
+  python3 - "$repo_root/flake.lock" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], "r", encoding="utf-8") as handle:
+    lock = json.load(handle)
+
+node = lock["nodes"]["toolkit"]["locked"]
+if node.get("type") != "github":
+    raise SystemExit(f"unsupported toolkit lock type: {node.get('type')}")
+
+ref = f"github:{node['owner']}/{node['repo']}/{node['rev']}"
+nar_hash = node.get("narHash")
+if nar_hash:
+    ref += f"?narHash={nar_hash}"
+
+print(ref)
+PY
+)"
+
+exec nix develop "$toolkit_flake_ref" --command "$@"
 ```
 
 This wrapper does two things:
 
 - if the caller is already inside the consuming repo's flake shell, it runs the
   toolkit command directly
-- otherwise, it enters the repo shell and reruns the command there
+- otherwise, it enters the pinned toolkit flake directly from `flake.lock`
+
+That second path avoids snapshotting the whole consuming repo as a local flake
+input, which is usually much faster on dirty worktrees.
 
 After copying it into `scripts/toolkit-shell.sh`, make it executable:
 

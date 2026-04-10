@@ -257,7 +257,11 @@ EOF
 
           shellHook = ''
             export PATH="$HOME/.cargo/bin:$PATH"
-            export TOOLKIT_ROOT="$PWD"
+            if [ -f "$PWD/flake.nix" ] && [ -d "$PWD/xtask" ] && [ -d "$PWD/lints" ]; then
+              export TOOLKIT_ROOT="$PWD"
+            else
+              export TOOLKIT_ROOT="${self.outPath}"
+            fi
             echo "Toolkit nightly environment"
             echo "Rust: $(${rustToolchainNightly}/bin/rustc --version)"
             echo "Run 'toolkit-install-dylint' once in this shell if cargo-dylint is not installed."
