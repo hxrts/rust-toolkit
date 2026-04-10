@@ -1,3 +1,6 @@
 .DS_Store
 **/target/
 **/Cargo.lock
+result
+result-*
+.direnv/
