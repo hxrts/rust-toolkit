@@ -22,6 +22,10 @@
         pkgs = import nixpkgs {
           inherit system overlays;
         };
+        toolkitRuntimeLibPath = pkgs.lib.makeLibraryPath (
+          [ pkgs.openssl pkgs.zlib ]
+          ++ pkgs.lib.optionals pkgs.stdenv.isLinux [ pkgs.libssh2 ]
+        );
 
         rustToolchainNightly = pkgs.rust-bin.nightly.latest.default.override {
           extensions = [
@@ -281,6 +285,17 @@ EOF
 
           shellHook = ''
             export PATH="$HOME/.cargo/bin:$PATH"
+            export TOOLKIT_RUNTIME_LIBRARY_PATH="${toolkitRuntimeLibPath}"
+            if [ -n "''${LD_LIBRARY_PATH:-}" ]; then
+              export LD_LIBRARY_PATH="$TOOLKIT_RUNTIME_LIBRARY_PATH:$LD_LIBRARY_PATH"
+            else
+              export LD_LIBRARY_PATH="$TOOLKIT_RUNTIME_LIBRARY_PATH"
+            fi
+            if [ -n "''${DYLD_LIBRARY_PATH:-}" ]; then
+              export DYLD_LIBRARY_PATH="$TOOLKIT_RUNTIME_LIBRARY_PATH:$DYLD_LIBRARY_PATH"
+            else
+              export DYLD_LIBRARY_PATH="$TOOLKIT_RUNTIME_LIBRARY_PATH"
+            fi
             if [ -f "$PWD/flake.nix" ] && [ -d "$PWD/xtask" ] && [ -d "$PWD/lints" ]; then
               export TOOLKIT_ROOT="$PWD"
             else
