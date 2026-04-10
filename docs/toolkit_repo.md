@@ -42,7 +42,8 @@ toolkit/
   Reusable fixture repositories and expected results for validation, including
   miniature pass/fail repo fixtures for config-driven checks.
 - `docs/`
-  Consumer workflow, ownership rules, and contributor guidance.
+  Consumer workflow, ownership rules, contributor guidance, and copyable
+  bootstrap snippets such as `docs/toolkit-shell.sh`.
 - `flake.nix`
   Hermetic nightly tooling and the toolkit command surface:
   `toolkit-xtask`, `toolkit-fmt`, `toolkit-install-dylint`,
@@ -68,6 +69,8 @@ commands can find the checkout they are supposed to operate on.
 
 The consuming repo should not reimplement those mechanics unless it is fixing a
 toolkit bug temporarily on the way to moving that fix back here.
+The only expected repo-local wrapper is a tiny bootstrap such as the copyable
+`docs/toolkit-shell.sh` snippet documented in `docs/consuming_repos.md`.
 
 ## Ownership Rules
 

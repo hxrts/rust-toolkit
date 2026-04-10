@@ -3,6 +3,13 @@
 Repositories that adopt the toolkit should keep their own entrypoints and
 repository-specific policy, but consume the toolkit through a flake input.
 
+This guide assumes the consuming repo:
+
+- exposes toolkit commands from its default `nix develop` shell
+- sets `TOOLKIT_ROOT` to the toolkit flake input path in `shellHook`
+- keeps a tiny repo-local `scripts/toolkit-shell.sh` bootstrap for `just`, CI,
+  and hooks
+
 ## Ownership Split
 
 - toolkit repo:
@@ -35,6 +42,7 @@ The consuming repository keeps ownership of:
 - CI workflow commands
 - pre-commit hooks
 - the repo `flake.nix` and `flake.lock`
+- small local bootstrap scripts such as `scripts/toolkit-shell.sh`
 - `policy/`
 
 Those entrypoints call into the toolkit commands exposed from the repo's own
@@ -50,8 +58,9 @@ default dev shell and pass the local config, usually
    policy docs only as needed.
 5. Export `TOOLKIT_ROOT` to the toolkit input path from the repo shell.
 6. Add the toolkit command packages to the repo shell.
-7. Run toolkit commands from `just`, CI, and hooks through the repo shell.
-7. Add domain-specific rules only under `policy/`.
+7. Add a tiny `scripts/toolkit-shell.sh` bootstrap.
+8. Run toolkit commands from `just`, CI, and hooks through that bootstrap.
+9. Add domain-specific rules only under `policy/`.
 
 ## Toolkit Command Surface
 
@@ -98,6 +107,50 @@ shellHook = ''
 That keeps toolkit versioning repo-owned through the repo's flake lock while
 making the toolkit command surface directly usable from `just`, CI, and hooks.
 
+A minimal shell package set usually includes:
+
+```nix
+toolkit.packages.${system}.toolkit-xtask
+toolkit.packages.${system}.toolkit-fmt
+toolkit.packages.${system}.toolkit-install-dylint
+toolkit.packages.${system}.toolkit-dylint
+toolkit.packages.${system}.toolkit-dylint-link
+```
+
+## Copyable Bootstrap Script
+
+Most consuming repos should keep one tiny wrapper at
+`scripts/toolkit-shell.sh`. A canonical version lives in
+[`docs/toolkit-shell.sh`](./toolkit-shell.sh) and can be copied directly.
+
+Recommended content:
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "${repo_root}"
+
+if [ -n "${IN_NIX_SHELL:-}" ] && [ -n "${TOOLKIT_ROOT:-}" ] && command -v toolkit-xtask >/dev/null 2>&1; then
+  exec "$@"
+fi
+
+exec nix develop "path:${repo_root}" --command "$@"
+```
+
+This wrapper does two things:
+
+- if the caller is already inside the consuming repo's flake shell, it runs the
+  toolkit command directly
+- otherwise, it enters the repo shell and reruns the command there
+
+After copying it into `scripts/toolkit-shell.sh`, make it executable:
+
+```bash
+chmod +x scripts/toolkit-shell.sh
+```
+
 ## Rule Placement
 
 - if a rule is generic and only the scope is repo-specific, configure it in
@@ -109,15 +162,15 @@ making the toolkit command surface directly usable from `just`, CI, and hooks.
 
 ## Practical Command Shape
 
-The consuming repo should usually call toolkit commands directly from its own
-shell:
+The consuming repo should usually call toolkit commands through that local
+bootstrap:
 
 ```bash
-nix develop --command toolkit-xtask check <name> --repo-root . --config policy/toolkit.toml
-nix develop --command toolkit-install-dylint
-nix develop --command toolkit-dylint --repo-root . --toolkit-lint trait_purity --all -- --all-targets
-nix develop --command toolkit-dylint --repo-root . --lint-path ./policy/lints/model_policy --all -- --all-targets
-nix develop --command toolkit-fmt --all -- --check
+./scripts/toolkit-shell.sh toolkit-xtask check <name> --repo-root . --config policy/toolkit.toml
+./scripts/toolkit-shell.sh toolkit-install-dylint
+./scripts/toolkit-shell.sh toolkit-dylint --repo-root . --toolkit-lint trait_purity --all -- --all-targets
+./scripts/toolkit-shell.sh toolkit-dylint --repo-root . --lint-path ./policy/lints/model_policy --all -- --all-targets
+./scripts/toolkit-shell.sh toolkit-fmt --all -- --check
 ```
 
 Repo-specific policy commands remain repo-owned. For example, a consuming repo
@@ -126,6 +179,17 @@ can still run its own policy runner directly:
 ```bash
 cargo run --manifest-path policy/xtask/Cargo.toml -- check <name>
 ```
+
+## Minimal Adoption Checklist
+
+1. Add `toolkit` as a flake input.
+2. Expose toolkit packages from the repo's default shell.
+3. Export `TOOLKIT_ROOT="${toolkit}"` from `shellHook`.
+4. Copy [`docs/toolkit-shell.sh`](./toolkit-shell.sh) to
+   `scripts/toolkit-shell.sh`.
+5. `chmod +x scripts/toolkit-shell.sh`.
+6. Add `policy/toolkit.toml`.
+7. Point `just`, CI, and hooks at `./scripts/toolkit-shell.sh toolkit-...`.
 
 ## Repo-Local Dylint Requirements
 
