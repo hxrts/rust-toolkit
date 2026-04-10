@@ -43,6 +43,7 @@
 
         installDylint = pkgs.writeShellScriptBin "toolkit-install-dylint" ''
           set -euo pipefail
+          toolkit_root="''${TOOLKIT_ROOT:-}"
           dylint_repo="''${XDG_CACHE_HOME:-$HOME/.cache}/toolkit/dylint"
           dylint_rev="4bd91ce7729b74c7ee5664bbb588f7baf30b4a09"
           mkdir -p "$(dirname "$dylint_repo")"
@@ -58,8 +59,8 @@
           toolchain_root="$(dirname "$(dirname "$(command -v rustc)")")"
           rustup toolchain remove "$toolchain_name" >/dev/null 2>&1 || true
           rustup toolchain link "$toolchain_name" "$toolchain_root"
-          if [ -d "$PWD/toolkit/lints" ]; then
-            (cd "$PWD/toolkit/lints" && rustup override set "$toolchain_name" >/dev/null)
+          if [ -n "$toolkit_root" ] && [ -d "$toolkit_root/lints" ]; then
+            (cd "$toolkit_root/lints" && rustup override set "$toolchain_name" >/dev/null)
           fi
         '';
 
@@ -75,10 +76,15 @@
         cargoFmtNightly = pkgs.writeShellScriptBin "toolkit-cargo-fmt-nightly" ''
           set -euo pipefail
           repo_root="''${1:-$PWD}"
+          toolkit_root="''${TOOLKIT_ROOT:-}"
           if [ "$#" -gt 0 ]; then
             shift
           fi
-          export RUSTFMT_CONFIG_PATH="$repo_root/toolkit/rustfmt.toml"
+          if [ -z "$toolkit_root" ]; then
+            echo "toolkit-cargo-fmt-nightly requires TOOLKIT_ROOT" >&2
+            exit 1
+          fi
+          export RUSTFMT_CONFIG_PATH="$toolkit_root/rustfmt.toml"
           exec ${rustToolchainNightly}/bin/cargo fmt "$@"
         '';
       in

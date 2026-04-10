@@ -10,6 +10,15 @@ use report::FindingSet;
 
 const DEFAULT_CONFIG: &str = "policy/toolkit.toml";
 
+fn toolkit_root() -> Result<PathBuf> {
+    let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    canonicalize_existing(
+        manifest_dir
+            .parent()
+            .ok_or_else(|| anyhow::anyhow!("xtask manifest has no parent directory"))?,
+    )
+}
+
 fn main() {
     if let Err(err) = run() {
         eprintln!("{err:#}");
@@ -191,18 +200,19 @@ fn show_config(args: &[String]) -> Result<()> {
 
 fn run_fmt_check(args: &[String]) -> Result<()> {
     let (repo_root, _) = parse_shared_args(args)?;
+    let toolkit_root = toolkit_root()?;
+    let nix_path = format!("path:{}", toolkit_root.join("nix").display());
     let status = process::Command::new("nix")
         .args([
             "develop",
-            "path:./toolkit/nix",
+            &nix_path,
             "--command",
             "bash",
             "-lc",
-            &format!(
-                "toolkit-cargo-fmt-nightly {} --manifest-path toolkit/xtask/Cargo.toml -- --check",
-                repo_root.display()
-            ),
+            "toolkit-cargo-fmt-nightly \"$REPO_ROOT\" --manifest-path \"$TOOLKIT_ROOT/xtask/Cargo.toml\" -- --check",
         ])
+        .env("REPO_ROOT", &repo_root)
+        .env("TOOLKIT_ROOT", &toolkit_root)
         .current_dir(&repo_root)
         .status()?;
     if status.success() {
@@ -214,18 +224,19 @@ fn run_fmt_check(args: &[String]) -> Result<()> {
 
 fn run_fmt(args: &[String]) -> Result<()> {
     let (repo_root, _) = parse_shared_args(args)?;
+    let toolkit_root = toolkit_root()?;
+    let nix_path = format!("path:{}", toolkit_root.join("nix").display());
     let status = process::Command::new("nix")
         .args([
             "develop",
-            "path:./toolkit/nix",
+            &nix_path,
             "--command",
             "bash",
             "-lc",
-            &format!(
-                "toolkit-cargo-fmt-nightly {} --manifest-path toolkit/xtask/Cargo.toml",
-                repo_root.display()
-            ),
+            "toolkit-cargo-fmt-nightly \"$REPO_ROOT\" --manifest-path \"$TOOLKIT_ROOT/xtask/Cargo.toml\"",
         ])
+        .env("REPO_ROOT", &repo_root)
+        .env("TOOLKIT_ROOT", &toolkit_root)
         .current_dir(&repo_root)
         .status()?;
     if status.success() {
@@ -237,15 +248,18 @@ fn run_fmt(args: &[String]) -> Result<()> {
 
 fn run_clippy(args: &[String]) -> Result<()> {
     let (repo_root, _) = parse_shared_args(args)?;
+    let toolkit_root = toolkit_root()?;
+    let nix_path = format!("path:{}", toolkit_root.join("nix").display());
     let status = process::Command::new("nix")
         .args([
             "develop",
-            "path:./toolkit/nix",
+            &nix_path,
             "--command",
             "bash",
             "-lc",
-            "cd toolkit/xtask && cargo clippy --all-targets -- -D warnings",
+            "cd \"$TOOLKIT_ROOT/xtask\" && cargo clippy --all-targets -- -D warnings",
         ])
+        .env("TOOLKIT_ROOT", &toolkit_root)
         .current_dir(&repo_root)
         .status()?;
     if status.success() {
@@ -257,15 +271,18 @@ fn run_clippy(args: &[String]) -> Result<()> {
 
 fn run_dylint(args: &[String]) -> Result<()> {
     let (repo_root, _) = parse_shared_args(args)?;
+    let toolkit_root = toolkit_root()?;
+    let nix_path = format!("path:{}", toolkit_root.join("nix").display());
     let status = process::Command::new("nix")
         .args([
             "develop",
-            "path:./toolkit/nix",
+            &nix_path,
             "--command",
             "bash",
             "-lc",
-            "toolkit-install-dylint && cargo dylint --path toolkit/lints/trait_must_use --manifest-path crates/traits/Cargo.toml -- --all-targets && cargo dylint --path toolkit/lints/style_limits --manifest-path toolkit/xtask/Cargo.toml -- --all-targets",
+            "toolkit-install-dylint && cargo dylint --path \"$TOOLKIT_ROOT/lints/trait_must_use\" --manifest-path crates/traits/Cargo.toml -- --all-targets && cargo dylint --path \"$TOOLKIT_ROOT/lints/style_limits\" --manifest-path \"$TOOLKIT_ROOT/xtask/Cargo.toml\" -- --all-targets",
         ])
+        .env("TOOLKIT_ROOT", &toolkit_root)
         .current_dir(&repo_root)
         .status()?;
     if status.success() {
