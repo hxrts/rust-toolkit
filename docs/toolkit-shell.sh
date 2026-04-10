@@ -9,24 +9,19 @@ if [ -n "${IN_NIX_SHELL:-}" ] && [ -n "${TOOLKIT_ROOT:-}" ] && command -v toolki
 fi
 
 toolkit_flake_ref="$(
-  python3 - "$repo_root/flake.lock" <<'PY'
-import json
-import sys
-
-with open(sys.argv[1], "r", encoding="utf-8") as handle:
-    lock = json.load(handle)
-
-node = lock["nodes"]["toolkit"]["locked"]
-if node.get("type") != "github":
-    raise SystemExit(f"unsupported toolkit lock type: {node.get('type')}")
-
-ref = f"github:{node['owner']}/{node['repo']}/{node['rev']}"
-nar_hash = node.get("narHash")
-if nar_hash:
-    ref += f"?narHash={nar_hash}"
-
-print(ref)
-PY
+  perl -MJSON::PP -e '
+    my $path = shift;
+    open my $fh, "<", $path or die "failed to open $path: $!";
+    local $/;
+    my $lock = decode_json(<$fh>);
+    my $node = $lock->{nodes}{toolkit}{locked}
+      or die "missing toolkit lock entry\n";
+    die "unsupported toolkit lock type: " . ($node->{type} // q()) . "\n"
+      unless ($node->{type} // q()) eq "github";
+    my $ref = "github:$node->{owner}/$node->{repo}/$node->{rev}";
+    $ref .= "?narHash=$node->{narHash}" if exists $node->{narHash};
+    print $ref;
+  ' "$repo_root/flake.lock"
 )"
 
 exec nix develop "$toolkit_flake_ref" --command "$@"
