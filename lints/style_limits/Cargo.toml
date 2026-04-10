@@ -1,0 +1,20 @@
+[package]
+name = "toolkit-style-limits"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "Portable dylint checks for source size limits"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+dylint_linting = { git = "https://github.com/trailofbits/dylint.git", rev = "4bd91ce7729b74c7ee5664bbb588f7baf30b4a09", package = "dylint_linting" }
+
+[features]
+rlib = ["dylint_linting/constituent"]
+
+[package.metadata.rust-analyzer]
+rustc_private = true
+
+[workspace]

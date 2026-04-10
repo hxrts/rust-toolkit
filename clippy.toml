@@ -1,0 +1,8 @@
+# Toolkit-wide clippy configuration.
+#
+# This file is intentionally conservative. Repository-specific disallowed
+# methods/types should live in the repository adapter layer rather than in the
+# portable toolkit root.
+
+# Keep this file present so toolkit wrapper commands have a single, portable
+# configuration root even when the active policy surface is small.

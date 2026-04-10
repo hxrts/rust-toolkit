@@ -1,0 +1,15 @@
+[workspace]
+
+[package]
+name = "jacquard-toolkit-xtask"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+publish = false
+
+[dependencies]
+anyhow = "1"
+pulldown-cmark = "0.10"
+regex = "1"
+toml = "0.8"
+walkdir = "2"
