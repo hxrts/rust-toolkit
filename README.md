@@ -1,21 +1,16 @@
-# Toolkit
+# Rust Toolkit
 
-Portable Rust enforcement tooling for consuming repositories.
+Portable Rust enforcement tooling.
 
-This repository owns reusable policy machinery:
+Policy machinery:
 
-- generic `xtask`-style checks
 - reusable `dylint` crates
 - reusable proc macros and effect-support traits
+- generic `xtask`-style checks
 - fixture-based validation
 - config loading and source discovery
 - formatter, clippy, and dylint shell support
 
 Consuming repositories keep domain-specific policy in a repo-owned `policy/`
-directory and call this toolkit through local wrappers.
-
-Documentation:
-
-- [Consumer workflow](docs/consuming_repos.md)
-- [Repository layout and ownership](docs/repo_layout.md)
-- [Agent instructions](AGENTS.md)
+directory, resolve a pinned toolkit checkout locally, and call the toolkit
+command surface from its Nix shell. See `docs/consuming_repos.md`.

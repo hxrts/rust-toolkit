@@ -21,6 +21,8 @@ A consuming repository owns:
 - domain-specific lint crates
 - repo-specific exemptions
 - local `just`, CI, and hook entrypoints
+- the one local wrapper that resolves the pinned toolkit checkout and enters
+  the toolkit Nix shell
 
 If a proposed rule needs to name repo-specific concepts, crate topology, or
 domain language, it does not belong here.
@@ -48,12 +50,12 @@ domain language, it does not belong here.
 Run commands from the toolkit repo root.
 
 ```bash
-cargo run --manifest-path xtask/Cargo.toml -- show-config --repo-root <repo> --config <repo>/policy/toolkit.toml
-cargo run --manifest-path xtask/Cargo.toml -- check <name> --repo-root <repo> --config <repo>/policy/toolkit.toml
-cargo run --manifest-path xtask/Cargo.toml -- parity <name> --repo-root <repo> --config <repo>/policy/toolkit.toml
-cargo run --manifest-path xtask/Cargo.toml -- fmt-check
-cargo run --manifest-path xtask/Cargo.toml -- clippy
 nix develop path:./nix --command toolkit-install-dylint
+nix develop path:./nix --command toolkit-xtask show-config --repo-root <repo> --config <repo>/policy/toolkit.toml
+nix develop path:./nix --command toolkit-xtask check <name> --repo-root <repo> --config <repo>/policy/toolkit.toml
+nix develop path:./nix --command toolkit-xtask parity <name> --repo-root <repo> --config <repo>/policy/toolkit.toml
+nix develop path:./nix --command toolkit-fmt --config ./rustfmt.toml --all -- --check
+nix develop path:./nix --command toolkit-dylint --repo-root <repo> --toolkit-lint trait_purity --all -- --all-targets
 ```
 
 ## Adding New Enforcement

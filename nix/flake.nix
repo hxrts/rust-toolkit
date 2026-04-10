@@ -41,6 +41,16 @@
           exec "$HOME/.cargo/bin/cargo" "$@"
         '';
 
+        toolkitXtask = pkgs.writeShellScriptBin "toolkit-xtask" ''
+          set -euo pipefail
+          toolkit_root="''${TOOLKIT_ROOT:-}"
+          if [ -z "$toolkit_root" ]; then
+            echo "toolkit-xtask requires TOOLKIT_ROOT" >&2
+            exit 1
+          fi
+          exec "$HOME/.cargo/bin/cargo" run --manifest-path "$toolkit_root/xtask/Cargo.toml" -- "$@"
+        '';
+
         installDylint = pkgs.writeShellScriptBin "toolkit-install-dylint" ''
           set -euo pipefail
           toolkit_root="''${TOOLKIT_ROOT:-}"
@@ -73,19 +83,130 @@
           exec dylint-link "$@"
         '';
 
-        cargoFmtNightly = pkgs.writeShellScriptBin "toolkit-cargo-fmt-nightly" ''
+        toolkitFmt = pkgs.writeShellScriptBin "toolkit-fmt" ''
           set -euo pipefail
-          repo_root="''${1:-$PWD}"
           toolkit_root="''${TOOLKIT_ROOT:-}"
-          if [ "$#" -gt 0 ]; then
-            shift
+          config_path=""
+
+          if [ "''${1:-}" = "--config" ]; then
+            if [ "$#" -lt 2 ]; then
+              echo "toolkit-fmt: --config requires a path" >&2
+              exit 1
+            fi
+            config_path="$2"
+            shift 2
           fi
-          if [ -z "$toolkit_root" ]; then
-            echo "toolkit-cargo-fmt-nightly requires TOOLKIT_ROOT" >&2
+
+          if [ -z "$config_path" ]; then
+            if [ -z "$toolkit_root" ]; then
+              echo "toolkit-fmt requires either --config or TOOLKIT_ROOT" >&2
+              exit 1
+            fi
+            config_path="$toolkit_root/rustfmt.toml"
+          fi
+
+          export RUSTFMT_CONFIG_PATH="$config_path"
+          exec ${rustToolchainNightly}/bin/cargo fmt "$@"
+        '';
+
+        toolkitCargoFmtNightly = pkgs.writeShellScriptBin "toolkit-cargo-fmt-nightly" ''
+          set -euo pipefail
+          exec toolkit-fmt "$@"
+        '';
+
+        toolkitDylint = pkgs.writeShellScriptBin "toolkit-dylint" ''
+          set -euo pipefail
+
+          toolkit_root="''${TOOLKIT_ROOT:-}"
+          repo_root=""
+          lint_path=""
+          toolkit_lint=""
+
+          while [ "$#" -gt 0 ]; do
+            case "$1" in
+              --repo-root)
+                if [ "$#" -lt 2 ]; then
+                  echo "toolkit-dylint: --repo-root requires a path" >&2
+                  exit 1
+                fi
+                repo_root="$2"
+                shift 2
+                ;;
+              --lint-path)
+                if [ "$#" -lt 2 ]; then
+                  echo "toolkit-dylint: --lint-path requires a path" >&2
+                  exit 1
+                fi
+                lint_path="$2"
+                shift 2
+                ;;
+              --toolkit-lint)
+                if [ "$#" -lt 2 ]; then
+                  echo "toolkit-dylint: --toolkit-lint requires a lint name" >&2
+                  exit 1
+                fi
+                toolkit_lint="$2"
+                shift 2
+                ;;
+              --)
+                break
+                ;;
+              *)
+                break
+                ;;
+            esac
+          done
+
+          if [ -n "$toolkit_lint" ] && [ -n "$lint_path" ]; then
+            echo "toolkit-dylint: use either --toolkit-lint or --lint-path" >&2
             exit 1
           fi
-          export RUSTFMT_CONFIG_PATH="$toolkit_root/rustfmt.toml"
-          exec ${rustToolchainNightly}/bin/cargo fmt "$@"
+
+          if [ -n "$toolkit_lint" ]; then
+            if [ -z "$toolkit_root" ]; then
+              echo "toolkit-dylint: --toolkit-lint requires TOOLKIT_ROOT" >&2
+              exit 1
+            fi
+            lint_path="$toolkit_root/lints/$toolkit_lint"
+          fi
+
+          if [ -z "$lint_path" ]; then
+            echo "toolkit-dylint: missing --lint-path or --toolkit-lint" >&2
+            exit 1
+          fi
+
+          if [ ! -d "$lint_path" ]; then
+            echo "toolkit-dylint: lint path does not exist: $lint_path" >&2
+            exit 1
+          fi
+
+          if [ -n "$repo_root" ]; then
+            cd "$repo_root"
+          fi
+
+          export CARGO_INCREMENTAL="''${CARGO_INCREMENTAL:-0}"
+
+          host="$(rustc -vV | awk '/^host: / { print $2 }')"
+          toolchain_name="toolkit-nightly-''${host}"
+          temp_toolchain_file="$lint_path/rust-toolchain.toml"
+          created_temp_toolchain=0
+
+          if [ ! -f "$lint_path/rust-toolchain" ] && [ ! -f "$temp_toolchain_file" ]; then
+            cat >"$temp_toolchain_file" <<EOF
+[toolchain]
+channel = "$toolchain_name"
+EOF
+            created_temp_toolchain=1
+          fi
+
+          cleanup() {
+            if [ "$created_temp_toolchain" -eq 1 ]; then
+              rm -f "$temp_toolchain_file"
+            fi
+          }
+          trap cleanup EXIT
+
+          exec cargo dylint --path "$lint_path" "$@"
         '';
       in
       {
@@ -94,10 +215,13 @@
             with pkgs;
             [
               cargoWrapper
+              toolkitXtask
               rustToolchainNightly
               installDylint
               dylintLinkWrapper
-              cargoFmtNightly
+              toolkitFmt
+              toolkitCargoFmtNightly
+              toolkitDylint
               git
               just
               ripgrep
