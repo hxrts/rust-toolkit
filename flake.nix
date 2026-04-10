@@ -24,7 +24,7 @@
         };
         toolkitRuntimeLibPath = pkgs.lib.makeLibraryPath (
           [ pkgs.openssl pkgs.zlib ]
-          ++ pkgs.lib.optionals pkgs.stdenv.isLinux [ pkgs.libssh2 ]
+          ++ pkgs.lib.optionals pkgs.stdenv.isLinux [ pkgs.libssh2 pkgs.dbus ]
         );
 
         rustToolchainNightly = pkgs.rust-bin.nightly.latest.default.override {
@@ -281,6 +281,9 @@ EOF
             ])
             ++ pkgs.lib.optionals pkgs.stdenv.isDarwin [
               pkgs.libiconv
+            ]
+            ++ pkgs.lib.optionals pkgs.stdenv.isLinux [
+              pkgs.dbus
             ];
 
           shellHook = ''
