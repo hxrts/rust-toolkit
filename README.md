@@ -1,6 +1,6 @@
-# Rust Toolkit
+# Toolkit
 
-Portable Rust enforcement tooling.
+Portable enforcement tooling.
 
 Policy machinery:
 
