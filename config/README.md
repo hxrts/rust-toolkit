@@ -12,9 +12,26 @@ At minimum, the config should define:
 - per-check exemptions
 - any repository-specific planned crate names or path roots needed by generic checks
 
-Generic source-policy checks can also carry repo-owned thresholds. For example,
-the Lean source-style check is configured in the consuming repo with keys such
-as:
+## Rust Config Surface
+
+Generic Rust checks usually need:
+
+- `checks.<rust_check>.include_paths`
+- optional `checks.<rust_check>.exclude_path_parts`
+- threshold or allowlist keys that are still repository-owned but generic in
+  meaning
+
+Examples:
+
+- `checks.unsafe_boundary.allowed_path_parts`
+- `checks.unsafe_boundary.required_comment_markers`
+- `checks.must_use_public_return.allowed_return_type_prefixes`
+- `checks.public_type_width.banned_types`
+
+## Lean Config Surface
+
+Generic Lean source-style checks carry repo-owned thresholds and exemptions. The
+Lean source-style check is configured in the consuming repo with keys such as:
 
 - `checks.lean_style.include_paths`
 - `checks.lean_style.max_file_lines`
@@ -31,3 +48,7 @@ as:
 - `checks.lean_style.todo_comment_markers`
 - `checks.lean_style.file_exemptions`
 - `checks.lean_style.declaration_exemptions`
+
+Keep Rust and Lean policy keys visibly separated in consuming-repo examples.
+Mixed repos can use both, but the toolkit config surface should still make it
+clear which keys apply to Rust files and which apply to Lean files.

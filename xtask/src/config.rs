@@ -131,6 +131,7 @@ pub struct IgnoredResultConfig {
 pub struct UnsafeBoundaryConfig {
     pub enabled: bool,
     pub include_paths: Vec<String>,
+    pub exclude_path_parts: Vec<String>,
     pub allowed_path_parts: Vec<String>,
     pub required_comment_markers: Vec<String>,
 }
@@ -145,6 +146,8 @@ pub struct BoolParamConfig {
 pub struct MustUsePublicReturnConfig {
     pub enabled: bool,
     pub include_paths: Vec<String>,
+    pub exclude_path_parts: Vec<String>,
+    pub allowed_return_type_prefixes: Vec<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -164,6 +167,7 @@ pub struct DropSideEffectsConfig {
 pub struct RecursionGuardConfig {
     pub enabled: bool,
     pub include_paths: Vec<String>,
+    pub exclude_path_parts: Vec<String>,
     pub allow_comment_marker: String,
 }
 
@@ -184,6 +188,7 @@ pub struct LimitConstantConfig {
 pub struct PublicTypeWidthConfig {
     pub enabled: bool,
     pub include_paths: Vec<String>,
+    pub exclude_path_parts: Vec<String>,
     pub banned_types: Vec<String>,
 }
 
@@ -516,6 +521,7 @@ fn parse_unsafe_boundary_config(value: &toml::Value) -> Result<UnsafeBoundaryCon
     Ok(UnsafeBoundaryConfig {
         enabled: required_bool(table, "enabled")?,
         include_paths: required_string_list(table, "include_paths")?,
+        exclude_path_parts: optional_string_list(table, "exclude_path_parts")?,
         allowed_path_parts: optional_string_list(table, "allowed_path_parts")?,
         required_comment_markers: required_string_list(
             table,
@@ -539,6 +545,11 @@ fn parse_must_use_public_return_config(
     Ok(MustUsePublicReturnConfig {
         enabled: required_bool(table, "enabled")?,
         include_paths: required_string_list(table, "include_paths")?,
+        exclude_path_parts: optional_string_list(table, "exclude_path_parts")?,
+        allowed_return_type_prefixes: optional_string_list(
+            table,
+            "allowed_return_type_prefixes",
+        )?,
     })
 }
 
@@ -566,6 +577,7 @@ fn parse_recursion_guard_config(value: &toml::Value) -> Result<RecursionGuardCon
     Ok(RecursionGuardConfig {
         enabled: required_bool(table, "enabled")?,
         include_paths: required_string_list(table, "include_paths")?,
+        exclude_path_parts: optional_string_list(table, "exclude_path_parts")?,
         allow_comment_marker: required_string(table, "allow_comment_marker")?,
     })
 }
@@ -594,6 +606,7 @@ fn parse_public_type_width_config(
     Ok(PublicTypeWidthConfig {
         enabled: required_bool(table, "enabled")?,
         include_paths: required_string_list(table, "include_paths")?,
+        exclude_path_parts: optional_string_list(table, "exclude_path_parts")?,
         banned_types: required_string_list(table, "banned_types")?,
     })
 }

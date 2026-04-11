@@ -45,11 +45,38 @@ pub fn collect_rust_files(
     Ok(files)
 }
 
+pub fn collect_rust_policy_files(
+    root: &Path,
+    include_roots: &[String],
+    exclude_path_parts: &[String],
+) -> Result<Vec<PathBuf>> {
+    let mut files = Vec::new();
+    for path in collect_rust_files(root, include_roots)? {
+        let rel_path = normalize_rel_path(root, &path);
+        if rust_policy_path_excluded(&rel_path, exclude_path_parts) {
+            continue;
+        }
+        files.push(path);
+    }
+    Ok(files)
+}
+
 pub fn normalize_rel_path(root: &Path, path: &Path) -> String {
     path.strip_prefix(root)
         .unwrap_or(path)
         .to_string_lossy()
         .replace('\\', "/")
+}
+
+pub fn rust_policy_path_excluded(rel_path: &str, exclude_path_parts: &[String]) -> bool {
+    rel_path.contains("/tests/")
+        || rel_path.contains("/benches/")
+        || rel_path.contains("/examples/")
+        || rel_path.ends_with("/build.rs")
+        || rel_path.contains("/target/")
+        || exclude_path_parts
+            .iter()
+            .any(|part| !part.is_empty() && rel_path.contains(part))
 }
 
 pub fn collect_markdown_files(
@@ -279,4 +306,181 @@ pub fn preceding_lines(source: &str, byte_index: usize, count: usize) -> Vec<&st
     let keep_from = lines.len().saturating_sub(count);
     lines.drain(..keep_from);
     lines
+}
+
+pub fn mask_rust_comments_and_literals(source: &str) -> String {
+    #[derive(Clone, Copy, PartialEq, Eq)]
+    enum State {
+        Code,
+        LineComment,
+        BlockComment(usize),
+        String,
+        Char,
+        RawString(usize),
+    }
+
+    fn push_masked(out: &mut String, byte: u8) {
+        if byte == b'\n' {
+            out.push('\n');
+        } else {
+            out.push(' ');
+        }
+    }
+
+    let bytes = source.as_bytes();
+    let mut out = String::with_capacity(source.len());
+    let mut idx = 0usize;
+    let mut state = State::Code;
+    while idx < bytes.len() {
+        match state {
+            State::Code => {
+                if bytes[idx] == b'/' && bytes.get(idx + 1) == Some(&b'/') {
+                    push_masked(&mut out, bytes[idx]);
+                    push_masked(&mut out, bytes[idx + 1]);
+                    idx += 2;
+                    state = State::LineComment;
+                    continue;
+                }
+                if bytes[idx] == b'/' && bytes.get(idx + 1) == Some(&b'*') {
+                    push_masked(&mut out, bytes[idx]);
+                    push_masked(&mut out, bytes[idx + 1]);
+                    idx += 2;
+                    state = State::BlockComment(1);
+                    continue;
+                }
+                if bytes[idx] == b'r' {
+                    if let Some((hashes, consumed)) = raw_string_prefix(&bytes[idx..]) {
+                        for byte in &bytes[idx..idx + consumed] {
+                            push_masked(&mut out, *byte);
+                        }
+                        idx += consumed;
+                        state = State::RawString(hashes);
+                        continue;
+                    }
+                }
+                if bytes[idx] == b'b' && bytes.get(idx + 1) == Some(&b'r') {
+                    if let Some((hashes, consumed)) = raw_string_prefix(&bytes[idx + 1..]) {
+                        push_masked(&mut out, bytes[idx]);
+                        for byte in &bytes[idx + 1..idx + 1 + consumed] {
+                            push_masked(&mut out, *byte);
+                        }
+                        idx += consumed + 1;
+                        state = State::RawString(hashes);
+                        continue;
+                    }
+                }
+                if bytes[idx] == b'"' || (bytes[idx] == b'b' && bytes.get(idx + 1) == Some(&b'"')) {
+                    push_masked(&mut out, bytes[idx]);
+                    idx += 1;
+                    if bytes.get(idx - 1) == Some(&b'b') {
+                        push_masked(&mut out, bytes[idx]);
+                        idx += 1;
+                    }
+                    state = State::String;
+                    continue;
+                }
+                if bytes[idx] == b'\'' {
+                    push_masked(&mut out, bytes[idx]);
+                    idx += 1;
+                    state = State::Char;
+                    continue;
+                }
+                out.push(bytes[idx] as char);
+                idx += 1;
+            }
+            State::LineComment => {
+                push_masked(&mut out, bytes[idx]);
+                if bytes[idx] == b'\n' {
+                    state = State::Code;
+                }
+                idx += 1;
+            }
+            State::BlockComment(depth) => {
+                if bytes[idx] == b'/' && bytes.get(idx + 1) == Some(&b'*') {
+                    push_masked(&mut out, bytes[idx]);
+                    push_masked(&mut out, bytes[idx + 1]);
+                    idx += 2;
+                    state = State::BlockComment(depth + 1);
+                    continue;
+                }
+                if bytes[idx] == b'*' && bytes.get(idx + 1) == Some(&b'/') {
+                    push_masked(&mut out, bytes[idx]);
+                    push_masked(&mut out, bytes[idx + 1]);
+                    idx += 2;
+                    if depth == 1 {
+                        state = State::Code;
+                    } else {
+                        state = State::BlockComment(depth - 1);
+                    }
+                    continue;
+                }
+                push_masked(&mut out, bytes[idx]);
+                idx += 1;
+            }
+            State::String => {
+                push_masked(&mut out, bytes[idx]);
+                if bytes[idx] == b'\\' {
+                    idx += 1;
+                    if let Some(byte) = bytes.get(idx) {
+                        push_masked(&mut out, *byte);
+                        idx += 1;
+                    }
+                    continue;
+                }
+                if bytes[idx] == b'"' {
+                    state = State::Code;
+                }
+                idx += 1;
+            }
+            State::Char => {
+                push_masked(&mut out, bytes[idx]);
+                if bytes[idx] == b'\\' {
+                    idx += 1;
+                    if let Some(byte) = bytes.get(idx) {
+                        push_masked(&mut out, *byte);
+                        idx += 1;
+                    }
+                    continue;
+                }
+                if bytes[idx] == b'\'' {
+                    state = State::Code;
+                }
+                idx += 1;
+            }
+            State::RawString(hashes) => {
+                push_masked(&mut out, bytes[idx]);
+                if bytes[idx] == b'"' && raw_string_terminator_matches(bytes, idx + 1, hashes) {
+                    idx += 1;
+                    for _ in 0..hashes {
+                        if let Some(byte) = bytes.get(idx) {
+                            push_masked(&mut out, *byte);
+                            idx += 1;
+                        }
+                    }
+                    state = State::Code;
+                    continue;
+                }
+                idx += 1;
+            }
+        }
+    }
+    out
+}
+
+fn raw_string_prefix(bytes: &[u8]) -> Option<(usize, usize)> {
+    if bytes.first().copied() != Some(b'r') {
+        return None;
+    }
+    let mut idx = 1usize;
+    while bytes.get(idx) == Some(&b'#') {
+        idx += 1;
+    }
+    (bytes.get(idx) == Some(&b'"')).then_some((idx - 1, idx + 1))
+}
+
+fn raw_string_terminator_matches(bytes: &[u8], start: usize, hashes: usize) -> bool {
+    bytes
+        .get(start..start + hashes)
+        .map(|slice| slice.iter().all(|byte| *byte == b'#'))
+        .unwrap_or(false)
 }

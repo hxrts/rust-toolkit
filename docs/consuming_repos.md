@@ -13,10 +13,22 @@ This guide assumes the consuming repo:
 ## Ownership Split
 
 - toolkit repo:
-  generic checks, reusable lints, fixture harnesses, config parsing, proc
-  macros / effect support, and tooling shells
+  generic Rust checks, generic Lean source-style checks, reusable lints,
+  fixture harnesses, config parsing, proc macros / effect support, and tooling
+  shells
 - consuming repo:
   local `justfile`, CI wiring, hooks, and a repo-owned `policy/` directory
+
+## Rust Vs Lean Adoption
+
+Keep the split explicit in consuming repos:
+
+- Rust-only repos may adopt the Rust command surface and Rust checks without any
+  Lean configuration.
+- Lean-heavy repos may adopt the Lean style checks without using toolkit-owned
+  Rust lints.
+- Mixed repos can use both, but should keep Rust policy config and Lean policy
+  config visibly separated in `policy/toolkit.toml`.
 
 ## Recommended Layout
 
@@ -67,7 +79,7 @@ default dev shell and pass the local config, usually
 Inside the toolkit Nix shell, the reusable command surface is:
 
 - `toolkit-xtask`
-  Runs the generic `xtask` runner from the pinned toolkit checkout.
+  Runs the generic toolkit runner from the pinned toolkit checkout.
 - `toolkit-fmt`
   Runs nightly `cargo fmt`, using either `--config <rustfmt.toml>` or the
   toolkit repo's own `rustfmt.toml`.
@@ -91,7 +103,7 @@ The consuming repo should usually wire the toolkit in its own `flake.nix`:
 ```nix
 inputs = {
   toolkit = {
-    url = "github:hxrts/rust-toolkit";
+    url = "github:hxrts/toolkit";
     inputs.nixpkgs.follows = "nixpkgs";
     inputs.rust-overlay.follows = "rust-overlay";
     inputs.flake-utils.follows = "flake-utils";
@@ -187,6 +199,8 @@ chmod +x scripts/toolkit-shell.sh
 
 - if a rule is generic and only the scope is repo-specific, configure it in
   `policy/toolkit.toml`
+- if a rule is a generic Rust source-policy rule, keep it in toolkit
+- if a rule is a generic Lean source-style rule, keep it in toolkit
 - if a rule depends on repo-specific architecture concepts, keep it under
   `policy/`
 - if a repo-local rule later proves reusable, move it into the toolkit and

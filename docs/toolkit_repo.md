@@ -2,6 +2,21 @@
 
 This repository should stay focused on portable enforcement machinery.
 
+## Language Split
+
+The toolkit serves two generic policy surfaces:
+
+- Rust enforcement:
+  source-policy checks, `dylint` crates, proc macros, trait-contract support,
+  formatter/clippy/dylint shell commands.
+- Lean enforcement:
+  source-style checks over `.lean` files, along with the shared config parsing
+  and shell support needed to run them in consuming repos.
+
+Keep those surfaces separated in docs and config examples. A consuming repo may
+adopt one or both. The toolkit should not assume every consumer is a mixed
+Rust-and-Lean repo.
+
 ## Top-Level Layout
 
 ```text
@@ -33,7 +48,8 @@ toolkit/
 - `macros/`
   Public proc-macro crate for portable purity and effect-boundary annotations.
 - `xtask/`
-  Generic runner, config loading, source discovery, and reusable checks.
+  Generic runner, config loading, source discovery, reusable Rust checks, and
+  reusable Lean source-style checks.
 - `lints/`
   Portable `dylint` crates and shared dylint support files. The shared
   `lints/.cargo/config.toml` wires `toolkit-dylint-link` for non-Windows
@@ -76,7 +92,8 @@ The only expected repo-local wrapper is a tiny bootstrap such as the copyable
 
 This repo owns:
 
-- generic check semantics
+- generic Rust check semantics
+- generic Lean source-style check semantics
 - generic lint semantics
 - shared tooling shells
 - shared shell commands

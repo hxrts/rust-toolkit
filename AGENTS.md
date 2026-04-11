@@ -1,12 +1,13 @@
 # AGENTS.md
 
-This repository contains reusable Rust policy tooling. It is not the place for
-repository-specific architecture checks.
+This repository contains reusable policy tooling for Rust and Lean repos. It is
+not the place for repository-specific architecture checks.
 
 ## Mission
 
 The toolkit owns portable enforcement machinery:
 
+- generic Rust source-policy checks
 - generic `xtask` checks
 - reusable `dylint` crates
 - reusable proc macros and effect-support traits
@@ -28,6 +29,23 @@ A consuming repository owns:
 
 If a proposed rule needs to name repo-specific concepts, crate topology, or
 domain language, it does not belong here.
+
+## Rust Vs Lean Scope
+
+Keep the split explicit:
+
+- Rust checks belong here when they apply generically across Rust workspaces and
+  can be parameterized by config.
+- Lean checks belong here when they are source-style or file-structure rules
+  over `.lean` files and do not encode one repository's theorem-pack language.
+- Lean declaration-semantic linting that depends on one repository's proof
+  architecture does not belong here.
+- Repo-specific architecture rules still belong in the consuming repo's
+  `policy/` directory, whether the repo is Rust-heavy, Lean-heavy, or mixed.
+
+The toolkit should not blur these surfaces. Keep Rust policy docs, Lean policy
+docs, config keys, and examples visibly separated so consuming repos can adopt
+only the pieces they need.
 
 ## Working Rules
 

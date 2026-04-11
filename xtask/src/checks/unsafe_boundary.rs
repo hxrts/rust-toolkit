@@ -6,7 +6,10 @@ use regex::Regex;
 use crate::{
     config::ToolkitConfig,
     report::FlatFindingSet,
-    util::{collect_rust_files, line_number_at, normalize_rel_path, preceding_lines},
+    util::{
+        collect_rust_policy_files, line_number_at, mask_rust_comments_and_literals,
+        normalize_rel_path, preceding_lines,
+    },
 };
 
 pub fn run(repo_root: &Path, config: &ToolkitConfig) -> Result<FlatFindingSet> {
@@ -17,17 +20,19 @@ pub fn run(repo_root: &Path, config: &ToolkitConfig) -> Result<FlatFindingSet> {
         return Ok(FlatFindingSet::default());
     }
 
-    let unsafe_re = Regex::new(r"\bunsafe\b")?;
+    let unsafe_re =
+        Regex::new(r"\bunsafe(?:\s+fn|\s+trait|\s+impl|\s+extern|\s*\{)")?;
     let mut findings = FlatFindingSet::default();
-    for path in collect_rust_files(repo_root, &check.include_paths)? {
+    for path in collect_rust_policy_files(
+        repo_root,
+        &check.include_paths,
+        &check.exclude_path_parts,
+    )? {
         let rel = normalize_rel_path(repo_root, &path);
         let source = fs::read_to_string(&path)
             .with_context(|| format!("reading {}", path.display()))?;
-        for matched in unsafe_re.find_iter(&source) {
-            let line = source[matched.start()..].lines().next().unwrap_or_default();
-            if line.contains("unsafe_code") {
-                continue;
-            }
+        let masked = mask_rust_comments_and_literals(&source);
+        for matched in unsafe_re.find_iter(&masked) {
             let line_no = line_number_at(&source, matched.start());
             if !check.allowed_path_parts.is_empty()
                 && !check
