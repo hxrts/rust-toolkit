@@ -22,14 +22,18 @@ pub struct ChecksConfig {
     pub test_boundaries: Option<TestBoundariesConfig>,
     pub lean_style: Option<LeanStyleConfig>,
     pub lean_escape_hatches: Option<LeanEscapeHatchesConfig>,
+    pub lean_architecture: Option<LeanArchitectureConfig>,
     pub docs_link_check: Option<DocsLinkCheckConfig>,
     pub docs_semantic_drift: Option<DocsSemanticDriftConfig>,
+    pub docs_prose_quality: Option<DocsProseQualityConfig>,
     pub workflow_actions: Option<WorkflowActionsConfig>,
     pub text_formatting: Option<TextFormattingConfig>,
+    pub workspace_layering: Option<WorkspaceLayeringConfig>,
     pub workspace_hygiene: Option<WorkspaceHygieneConfig>,
     pub crate_root_policy: Option<CrateRootPolicyConfig>,
     pub ignored_result: Option<IgnoredResultConfig>,
     pub unsafe_boundary: Option<UnsafeBoundaryConfig>,
+    pub rust_architecture: Option<RustArchitectureConfig>,
     pub bool_param: Option<BoolParamConfig>,
     pub must_use_public_return: Option<MustUsePublicReturnConfig>,
     pub assert_shape: Option<AssertShapeConfig>,
@@ -128,6 +132,16 @@ pub struct LeanEscapeHatchFileExemption {
 }
 
 #[derive(Debug, Clone)]
+pub struct LeanArchitectureConfig {
+    pub enabled: bool,
+    pub include_paths: Vec<String>,
+    pub exclude_path_parts: Vec<String>,
+    pub root_facade_files: Vec<String>,
+    pub legacy_projection_exempt_path_parts: Vec<String>,
+    pub theorempack_exempt_path_parts: Vec<String>,
+}
+
+#[derive(Debug, Clone)]
 pub struct DocsSemanticDriftConfig {
     pub enabled: bool,
     pub docs_roots: Vec<String>,
@@ -137,10 +151,28 @@ pub struct DocsSemanticDriftConfig {
 }
 
 #[derive(Debug, Clone)]
+pub struct DocsProseQualityConfig {
+    pub enabled: bool,
+    pub include_paths: Vec<String>,
+    pub exclude_path_parts: Vec<String>,
+    pub ban_em_dash: bool,
+    pub ban_semicolon: bool,
+    pub require_explanatory_prose_after_code: bool,
+    pub require_prose_exceeds_code: bool,
+}
+
+#[derive(Debug, Clone)]
 pub struct TextFormattingConfig {
     pub enabled: bool,
     pub include_paths: Vec<String>,
     pub exclude_path_parts: Vec<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct WorkspaceLayeringConfig {
+    pub enabled: bool,
+    pub manifest_path: String,
+    pub crate_layers: BTreeMap<String, usize>,
 }
 
 #[derive(Debug, Clone)]
@@ -170,6 +202,16 @@ pub struct UnsafeBoundaryConfig {
     pub exclude_path_parts: Vec<String>,
     pub allowed_path_parts: Vec<String>,
     pub required_comment_markers: Vec<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct RustArchitectureConfig {
+    pub enabled: bool,
+    pub rust_roots: Vec<String>,
+    pub determinism_runtime_paths: Vec<String>,
+    pub determinism_test_paths: Vec<String>,
+    pub kernel_paths: Vec<String>,
+    pub fixed_wrapper_paths: Vec<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -298,6 +340,10 @@ fn parse_checks_config(value: &toml::Value) -> Result<ChecksConfig> {
         .get("lean_escape_hatches")
         .map(parse_lean_escape_hatches_config)
         .transpose()?;
+    let lean_architecture = table
+        .get("lean_architecture")
+        .map(parse_lean_architecture_config)
+        .transpose()?;
     let docs_link_check = table
         .get("docs_link_check")
         .map(parse_docs_link_check_config)
@@ -306,6 +352,10 @@ fn parse_checks_config(value: &toml::Value) -> Result<ChecksConfig> {
         .get("docs_semantic_drift")
         .map(parse_docs_semantic_drift_config)
         .transpose()?;
+    let docs_prose_quality = table
+        .get("docs_prose_quality")
+        .map(parse_docs_prose_quality_config)
+        .transpose()?;
     let workflow_actions = table
         .get("workflow_actions")
         .map(parse_workflow_actions_config)
@@ -313,6 +363,10 @@ fn parse_checks_config(value: &toml::Value) -> Result<ChecksConfig> {
     let text_formatting = table
         .get("text_formatting")
         .map(parse_text_formatting_config)
+        .transpose()?;
+    let workspace_layering = table
+        .get("workspace_layering")
+        .map(parse_workspace_layering_config)
         .transpose()?;
     let workspace_hygiene = table
         .get("workspace_hygiene")
@@ -329,6 +383,10 @@ fn parse_checks_config(value: &toml::Value) -> Result<ChecksConfig> {
     let unsafe_boundary = table
         .get("unsafe_boundary")
         .map(parse_unsafe_boundary_config)
+        .transpose()?;
+    let rust_architecture = table
+        .get("rust_architecture")
+        .map(parse_rust_architecture_config)
         .transpose()?;
     let bool_param = table
         .get("bool_param")
@@ -376,14 +434,18 @@ fn parse_checks_config(value: &toml::Value) -> Result<ChecksConfig> {
                 | "test_boundaries"
                 | "lean_style"
                 | "lean_escape_hatches"
+                | "lean_architecture"
                 | "docs_link_check"
                 | "docs_semantic_drift"
+                | "docs_prose_quality"
                 | "workflow_actions"
                 | "text_formatting"
+                | "workspace_layering"
                 | "workspace_hygiene"
                 | "crate_root_policy"
                 | "ignored_result"
                 | "unsafe_boundary"
+                | "rust_architecture"
                 | "bool_param"
                 | "must_use_public_return"
                 | "assert_shape"
@@ -405,14 +467,18 @@ fn parse_checks_config(value: &toml::Value) -> Result<ChecksConfig> {
         test_boundaries,
         lean_style,
         lean_escape_hatches,
+        lean_architecture,
         docs_link_check,
         docs_semantic_drift,
+        docs_prose_quality,
         workflow_actions,
         text_formatting,
+        workspace_layering,
         workspace_hygiene,
         crate_root_policy,
         ignored_result,
         unsafe_boundary,
+        rust_architecture,
         bool_param,
         must_use_public_return,
         assert_shape,
@@ -567,6 +633,26 @@ fn parse_lean_escape_hatch_file_exemption(
     })
 }
 
+fn parse_lean_architecture_config(
+    value: &toml::Value,
+) -> Result<LeanArchitectureConfig> {
+    let table = expect_table(value, "checks.lean_architecture")?;
+    Ok(LeanArchitectureConfig {
+        enabled: required_bool(table, "enabled")?,
+        include_paths: required_string_list(table, "include_paths")?,
+        exclude_path_parts: optional_string_list(table, "exclude_path_parts")?,
+        root_facade_files: required_string_list(table, "root_facade_files")?,
+        legacy_projection_exempt_path_parts: optional_string_list(
+            table,
+            "legacy_projection_exempt_path_parts",
+        )?,
+        theorempack_exempt_path_parts: optional_string_list(
+            table,
+            "theorempack_exempt_path_parts",
+        )?,
+    })
+}
+
 fn parse_docs_link_check_config(value: &toml::Value) -> Result<DocsLinkCheckConfig> {
     let table = expect_table(value, "checks.docs_link_check")?;
     Ok(DocsLinkCheckConfig {
@@ -589,6 +675,27 @@ fn parse_docs_semantic_drift_config(
     })
 }
 
+fn parse_docs_prose_quality_config(
+    value: &toml::Value,
+) -> Result<DocsProseQualityConfig> {
+    let table = expect_table(value, "checks.docs_prose_quality")?;
+    Ok(DocsProseQualityConfig {
+        enabled: required_bool(table, "enabled")?,
+        include_paths: required_string_list(table, "include_paths")?,
+        exclude_path_parts: optional_string_list(table, "exclude_path_parts")?,
+        ban_em_dash: required_bool(table, "ban_em_dash")?,
+        ban_semicolon: required_bool(table, "ban_semicolon")?,
+        require_explanatory_prose_after_code: required_bool(
+            table,
+            "require_explanatory_prose_after_code",
+        )?,
+        require_prose_exceeds_code: required_bool(
+            table,
+            "require_prose_exceeds_code",
+        )?,
+    })
+}
+
 fn parse_text_formatting_config(
     value: &toml::Value,
 ) -> Result<TextFormattingConfig> {
@@ -597,6 +704,17 @@ fn parse_text_formatting_config(
         enabled: required_bool(table, "enabled")?,
         include_paths: required_string_list(table, "include_paths")?,
         exclude_path_parts: optional_string_list(table, "exclude_path_parts")?,
+    })
+}
+
+fn parse_workspace_layering_config(
+    value: &toml::Value,
+) -> Result<WorkspaceLayeringConfig> {
+    let table = expect_table(value, "checks.workspace_layering")?;
+    Ok(WorkspaceLayeringConfig {
+        enabled: required_bool(table, "enabled")?,
+        manifest_path: required_string(table, "manifest_path")?,
+        crate_layers: optional_usize_map(table, "crate_layers")?,
     })
 }
 
@@ -644,6 +762,26 @@ fn parse_unsafe_boundary_config(value: &toml::Value) -> Result<UnsafeBoundaryCon
             table,
             "required_comment_markers",
         )?,
+    })
+}
+
+fn parse_rust_architecture_config(
+    value: &toml::Value,
+) -> Result<RustArchitectureConfig> {
+    let table = expect_table(value, "checks.rust_architecture")?;
+    Ok(RustArchitectureConfig {
+        enabled: required_bool(table, "enabled")?,
+        rust_roots: required_string_list(table, "rust_roots")?,
+        determinism_runtime_paths: required_string_list(
+            table,
+            "determinism_runtime_paths",
+        )?,
+        determinism_test_paths: optional_string_list(
+            table,
+            "determinism_test_paths",
+        )?,
+        kernel_paths: required_string_list(table, "kernel_paths")?,
+        fixed_wrapper_paths: required_string_list(table, "fixed_wrapper_paths")?,
     })
 }
 
