@@ -43,7 +43,32 @@ fn fail_fixture_reports_expected_findings() {
     assert!(semantic
         .entries
         .iter()
-        .any(|entry| entry.contains("unknown just recipe")));
+        .any(|entry| entry.contains("unresolved path")
+            || entry.contains("unresolved symbol")));
+
+    let workflows = checks::workflow_actions::run(&repo_root, &cfg).unwrap();
+    assert!(workflows
+        .entries
+        .iter()
+        .any(|entry| entry.contains("unresolved GitHub Action reference")));
+
+    let escape_hatches = checks::lean_escape_hatches::run(&repo_root, &cfg).unwrap();
+    assert!(escape_hatches
+        .entries
+        .iter()
+        .any(|entry| entry.contains("lean escape hatch `sorry`")));
+
+    let text_formatting = checks::text_formatting::run(&repo_root, &cfg).unwrap();
+    assert!(text_formatting
+        .entries
+        .iter()
+        .any(|entry| entry.contains("forbidden emoji detected")));
+
+    let workspace_hygiene = checks::workspace_hygiene::run(&repo_root, &cfg).unwrap();
+    assert!(workspace_hygiene
+        .entries
+        .iter()
+        .any(|entry| entry.contains("lonely mod.rs")));
 
     let crate_root = checks::crate_root_policy::run(&repo_root, &cfg).unwrap();
     assert!(crate_root
@@ -88,10 +113,7 @@ fn fail_fixture_reports_expected_findings() {
         .any(|entry| entry.contains("Drop implementation")));
 
     let recursion = checks::recursion_guard::run(&repo_root, &cfg).unwrap();
-    assert!(recursion
-        .entries
-        .iter()
-        .any(|entry| entry.contains("direct recursion")));
+    assert!(recursion.is_empty());
 
     let naming = checks::naming_units::run(&repo_root, &cfg).unwrap();
     assert!(naming
@@ -139,6 +161,18 @@ fn pass_fixture_reports_no_findings() {
         .unwrap()
         .is_empty());
     assert!(checks::docs_semantic_drift::run(&repo_root, &cfg)
+        .unwrap()
+        .is_empty());
+    assert!(checks::workflow_actions::run(&repo_root, &cfg)
+        .unwrap()
+        .is_empty());
+    assert!(checks::lean_escape_hatches::run(&repo_root, &cfg)
+        .unwrap()
+        .is_empty());
+    assert!(checks::text_formatting::run(&repo_root, &cfg)
+        .unwrap()
+        .is_empty());
+    assert!(checks::workspace_hygiene::run(&repo_root, &cfg)
         .unwrap()
         .is_empty());
     assert!(checks::crate_root_policy::run(&repo_root, &cfg)

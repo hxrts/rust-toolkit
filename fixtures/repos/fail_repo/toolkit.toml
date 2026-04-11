@@ -28,6 +28,17 @@ enabled = true
 docs_roots = ["docs"]
 manifest_path = "Cargo.toml"
 planned_crates = []
+file_exemptions = []
+
+[checks.text_formatting]
+enabled = true
+include_paths = ["docs"]
+exclude_path_parts = []
+
+[checks.workspace_hygiene]
+enabled = true
+include_paths = ["crates"]
+exclude_path_parts = []
 
 [checks.crate_root_policy]
 enabled = true
@@ -85,3 +96,21 @@ enabled = true
 manifest_roots = ["crates"]
 require_default_features_false = ["serde"]
 banned_dependencies = ["lazy_static"]
+
+[checks.workflow_actions]
+enabled = true
+workflow_roots = [".github/workflows"]
+pin_comment_markers = ["pin"]
+
+[checks.lean_escape_hatches]
+enabled = true
+include_paths = ["lean"]
+exclude_path_parts = []
+
+[checks.lean_escape_hatches.kind_thresholds]
+sorry = 0
+axiom = 0
+private_axiom = 0
+unsafe = 0
+partial_def = 0
+empty_theorem_shell = 0

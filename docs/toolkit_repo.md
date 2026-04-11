@@ -63,7 +63,7 @@ toolkit/
 - `flake.nix`
   Hermetic nightly tooling and the toolkit command surface:
   `toolkit-xtask`, `toolkit-fmt`, `toolkit-install-dylint`,
-  `toolkit-dylint`, and `toolkit-dylint-link`.
+  `toolkit-clippy`, `toolkit-dylint`, and `toolkit-dylint-link`.
 - `flake.lock`
   Pinned toolkit flake dependencies.
 - `config/`
@@ -75,6 +75,7 @@ The toolkit repo owns the reusable commands exposed from `flake.nix`:
 
 - `toolkit-xtask`
 - `toolkit-fmt`
+- `toolkit-clippy`
 - `toolkit-install-dylint`
 - `toolkit-dylint`
 - `toolkit-dylint-link`

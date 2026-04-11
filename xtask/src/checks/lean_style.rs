@@ -96,6 +96,13 @@ pub fn run(repo_root: &Path, config: &ToolkitConfig) -> Result<FlatFindingSet> {
                 if !contains_sorry(line) {
                     continue;
                 }
+                if check.forbid_sorry {
+                    findings.entries.insert(format!(
+                        "{rel}:{}: `sorry` is forbidden by toolkit lean style policy",
+                        line_no + 1
+                    ));
+                    continue;
+                }
                 if !has_nearby_todo(&lines, line_no + 1, &check.todo_comment_markers) {
                     findings.entries.insert(format!(
                         "{rel}:{}: `sorry` requires a nearby TODO marker {:?}",
@@ -569,6 +576,7 @@ require_section_headers = true
 require_over_limit_comment = true
 require_explanatory_comment_for_long_blocks = true
 require_public_theorem_lemma_docstrings = true
+forbid_sorry = false
 banned_imports = []
 banned_import_exemptions = []
 require_todo_for_sorry = true
@@ -620,6 +628,7 @@ require_section_headers = true
 require_over_limit_comment = true
 require_explanatory_comment_for_long_blocks = true
 require_public_theorem_lemma_docstrings = true
+forbid_sorry = false
 banned_imports = []
 banned_import_exemptions = []
 require_todo_for_sorry = true
@@ -688,6 +697,7 @@ require_section_headers = true
 require_over_limit_comment = true
 require_explanatory_comment_for_long_blocks = true
 require_public_theorem_lemma_docstrings = false
+forbid_sorry = false
 banned_imports = ["Field.Assumptions"]
 banned_import_exemptions = []
 require_todo_for_sorry = true
@@ -756,6 +766,7 @@ require_section_headers = true
 require_over_limit_comment = true
 require_explanatory_comment_for_long_blocks = true
 require_public_theorem_lemma_docstrings = true
+forbid_sorry = false
 banned_imports = []
 banned_import_exemptions = []
 require_todo_for_sorry = true
@@ -793,6 +804,58 @@ theorem foo : True := by
                 .iter()
                 .any(|entry| entry.contains("missing a preceding `/-- ... -/` docstring")),
             "expected docstring finding, got {findings:?}"
+        );
+    }
+
+    #[test]
+    fn lean_style_can_forbid_sorry_entirely() {
+        let root = temp_dir("forbid-sorry");
+        fs::create_dir_all(root.join("verification/Field")).expect("field dir");
+        fs::write(
+            root.join("toolkit.toml"),
+            r#"
+[workspace]
+crate_roots = ["crates"]
+
+[checks.lean_style]
+enabled = true
+include_paths = ["verification/Field"]
+exclude_path_parts = []
+non_trivial_file_lines = 5
+section_header_min_lines = 5
+max_file_lines = 500
+max_decl_lines_target = 30
+max_decl_lines_hard_limit = 50
+enforce_target_decl_lines = false
+require_problem_statement = false
+enforce_top_of_file_structure = false
+require_section_headers = false
+require_over_limit_comment = false
+require_explanatory_comment_for_long_blocks = false
+require_public_theorem_lemma_docstrings = false
+forbid_sorry = true
+banned_imports = []
+banned_import_exemptions = []
+require_todo_for_sorry = true
+todo_comment_markers = ["TODO:"]
+over_limit_comment_markers = ["long-block-exception:"]
+"#,
+        )
+        .expect("config");
+        fs::write(
+            root.join("verification/Field/Test.lean"),
+            "def foo : Nat := by\n  exact sorry\n",
+        )
+        .expect("lean file");
+
+        let config = load(&root.join("toolkit.toml")).expect("load config");
+        let findings = run(&root, &config).expect("run check");
+        assert!(
+            findings
+                .entries
+                .iter()
+                .any(|entry| entry.contains("`sorry` is forbidden")),
+            "expected forbid-sorry finding, got {findings:?}"
         );
     }
 }

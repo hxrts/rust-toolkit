@@ -2,8 +2,7 @@ use std::{fs, path::Path};
 
 use anyhow::{Context, Result};
 use syn::{
-    spanned::Spanned, visit::Visit, ImplItem, ImplItemFn, ItemFn, ItemImpl, ReturnType, Type,
-    Visibility,
+    visit::Visit, ImplItem, ImplItemFn, ItemFn, ItemImpl, ReturnType, Type, Visibility,
 };
 
 use crate::{

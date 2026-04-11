@@ -1,0 +1,7 @@
+name: Check
+on: push
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: leanprover/lean4-action@v1

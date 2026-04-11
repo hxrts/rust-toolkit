@@ -26,6 +26,15 @@
           [ pkgs.openssl pkgs.zlib ]
           ++ pkgs.lib.optionals pkgs.stdenv.isLinux [ pkgs.libssh2 pkgs.dbus ]
         );
+        rustToolchainStable = pkgs.rust-bin.stable.latest.default.override {
+          extensions = [
+            "rust-src"
+            "rust-analyzer"
+          ];
+        };
+        rustToolchainFmt = pkgs.rust-bin.nightly.latest.default.override {
+          extensions = [ "rustfmt" ];
+        };
 
         rustToolchainNightly = pkgs.rust-bin.nightly.latest.default.override {
           extensions = [
@@ -57,7 +66,7 @@
           target_key="$(basename "$toolkit_root" | tr -cs 'A-Za-z0-9._-' '_')"
           target_dir="''${XDG_CACHE_HOME:-$HOME/.cache}/toolkit/xtask-target/$target_key"
           mkdir -p "$target_dir"
-          exec ${rustToolchainNightly}/bin/cargo run --target-dir "$target_dir" --manifest-path "$toolkit_root/xtask/Cargo.toml" -- "$@"
+          exec ${rustToolchainStable}/bin/cargo run --target-dir "$target_dir" --manifest-path "$toolkit_root/xtask/Cargo.toml" -- "$@"
         '';
 
         installDylint = pkgs.writeShellScriptBin "toolkit-install-dylint" ''
@@ -130,7 +139,13 @@
           fi
 
           export RUSTFMT_CONFIG_PATH="$config_path"
-          exec ${rustToolchainNightly}/bin/cargo fmt "$@"
+          exec ${rustToolchainFmt}/bin/cargo fmt "$@"
+        '';
+
+        toolkitClippy = pkgs.writeShellScriptBin "toolkit-clippy" ''
+          set -euo pipefail
+          export PATH="$HOME/.cargo/bin:$PATH"
+          exec ${rustToolchainNightly}/bin/cargo clippy "$@"
         '';
 
         toolkitCargoFmtNightly = pkgs.writeShellScriptBin "toolkit-cargo-fmt-nightly" ''
@@ -262,11 +277,16 @@ EOF
           toolkit-install-dylint = installDylint;
           toolkit-dylint-link = dylintLinkWrapper;
           toolkit-fmt = toolkitFmt;
+          toolkit-clippy = toolkitClippy;
           toolkit-cargo-fmt-nightly = toolkitCargoFmtNightly;
           toolkit-dylint = toolkitDylint;
         };
         consumerShellSupport = {
-          packages = builtins.attrValues toolkitPackages;
+          packages = [
+            toolkitPackages.toolkit-xtask
+            toolkitPackages.toolkit-fmt
+            toolkitPackages.toolkit-cargo-fmt-nightly
+          ];
           buildInputs =
             with pkgs;
             [ zlib ]

@@ -21,8 +21,12 @@ pub struct ChecksConfig {
     pub result_must_use: Option<ResultMustUseConfig>,
     pub test_boundaries: Option<TestBoundariesConfig>,
     pub lean_style: Option<LeanStyleConfig>,
+    pub lean_escape_hatches: Option<LeanEscapeHatchesConfig>,
     pub docs_link_check: Option<DocsLinkCheckConfig>,
     pub docs_semantic_drift: Option<DocsSemanticDriftConfig>,
+    pub workflow_actions: Option<WorkflowActionsConfig>,
+    pub text_formatting: Option<TextFormattingConfig>,
+    pub workspace_hygiene: Option<WorkspaceHygieneConfig>,
     pub crate_root_policy: Option<CrateRootPolicyConfig>,
     pub ignored_result: Option<IgnoredResultConfig>,
     pub unsafe_boundary: Option<UnsafeBoundaryConfig>,
@@ -84,6 +88,7 @@ pub struct LeanStyleConfig {
     pub require_over_limit_comment: bool,
     pub require_explanatory_comment_for_long_blocks: bool,
     pub require_public_theorem_lemma_docstrings: bool,
+    pub forbid_sorry: bool,
     pub banned_imports: Vec<String>,
     pub banned_import_exemptions: Vec<String>,
     pub require_todo_for_sorry: bool,
@@ -107,11 +112,42 @@ pub struct LeanStyleDeclarationExemption {
 }
 
 #[derive(Debug, Clone)]
+pub struct LeanEscapeHatchesConfig {
+    pub enabled: bool,
+    pub include_paths: Vec<String>,
+    pub exclude_path_parts: Vec<String>,
+    pub kind_thresholds: BTreeMap<String, usize>,
+    pub file_exemptions: Vec<LeanEscapeHatchFileExemption>,
+}
+
+#[derive(Debug, Clone)]
+pub struct LeanEscapeHatchFileExemption {
+    pub path: String,
+    pub kinds: Vec<String>,
+    pub reason: String,
+}
+
+#[derive(Debug, Clone)]
 pub struct DocsSemanticDriftConfig {
     pub enabled: bool,
     pub docs_roots: Vec<String>,
     pub manifest_path: String,
     pub planned_crates: Vec<String>,
+    pub file_exemptions: Vec<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct TextFormattingConfig {
+    pub enabled: bool,
+    pub include_paths: Vec<String>,
+    pub exclude_path_parts: Vec<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct WorkspaceHygieneConfig {
+    pub enabled: bool,
+    pub include_paths: Vec<String>,
+    pub exclude_path_parts: Vec<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -200,6 +236,13 @@ pub struct DependencyPolicyConfig {
     pub banned_dependencies: Vec<String>,
 }
 
+#[derive(Debug, Clone)]
+pub struct WorkflowActionsConfig {
+    pub enabled: bool,
+    pub workflow_roots: Vec<String>,
+    pub pin_comment_markers: Vec<String>,
+}
+
 pub fn load(path: &Path) -> Result<ToolkitConfig> {
     let contents = fs::read_to_string(path)
         .with_context(|| format!("reading toolkit config {}", path.display()))?;
@@ -251,6 +294,10 @@ fn parse_checks_config(value: &toml::Value) -> Result<ChecksConfig> {
         .get("lean_style")
         .map(parse_lean_style_config)
         .transpose()?;
+    let lean_escape_hatches = table
+        .get("lean_escape_hatches")
+        .map(parse_lean_escape_hatches_config)
+        .transpose()?;
     let docs_link_check = table
         .get("docs_link_check")
         .map(parse_docs_link_check_config)
@@ -258,6 +305,18 @@ fn parse_checks_config(value: &toml::Value) -> Result<ChecksConfig> {
     let docs_semantic_drift = table
         .get("docs_semantic_drift")
         .map(parse_docs_semantic_drift_config)
+        .transpose()?;
+    let workflow_actions = table
+        .get("workflow_actions")
+        .map(parse_workflow_actions_config)
+        .transpose()?;
+    let text_formatting = table
+        .get("text_formatting")
+        .map(parse_text_formatting_config)
+        .transpose()?;
+    let workspace_hygiene = table
+        .get("workspace_hygiene")
+        .map(parse_workspace_hygiene_config)
         .transpose()?;
     let crate_root_policy = table
         .get("crate_root_policy")
@@ -316,8 +375,12 @@ fn parse_checks_config(value: &toml::Value) -> Result<ChecksConfig> {
                 | "result_must_use"
                 | "test_boundaries"
                 | "lean_style"
+                | "lean_escape_hatches"
                 | "docs_link_check"
                 | "docs_semantic_drift"
+                | "workflow_actions"
+                | "text_formatting"
+                | "workspace_hygiene"
                 | "crate_root_policy"
                 | "ignored_result"
                 | "unsafe_boundary"
@@ -341,8 +404,12 @@ fn parse_checks_config(value: &toml::Value) -> Result<ChecksConfig> {
         result_must_use,
         test_boundaries,
         lean_style,
+        lean_escape_hatches,
         docs_link_check,
         docs_semantic_drift,
+        workflow_actions,
+        text_formatting,
+        workspace_hygiene,
         crate_root_policy,
         ignored_result,
         unsafe_boundary,
@@ -429,6 +496,7 @@ fn parse_lean_style_config(value: &toml::Value) -> Result<LeanStyleConfig> {
             table,
             "require_public_theorem_lemma_docstrings",
         )?,
+        forbid_sorry: required_bool(table, "forbid_sorry")?,
         banned_imports: optional_string_list(table, "banned_imports")?,
         banned_import_exemptions: optional_string_list(
             table,
@@ -473,6 +541,32 @@ fn parse_lean_style_declaration_exemption(
     })
 }
 
+fn parse_lean_escape_hatches_config(
+    value: &toml::Value,
+) -> Result<LeanEscapeHatchesConfig> {
+    let table = expect_table(value, "checks.lean_escape_hatches")?;
+    Ok(LeanEscapeHatchesConfig {
+        enabled: required_bool(table, "enabled")?,
+        include_paths: required_string_list(table, "include_paths")?,
+        exclude_path_parts: optional_string_list(table, "exclude_path_parts")?,
+        kind_thresholds: optional_usize_map(table, "kind_thresholds")?,
+        file_exemptions: optional_table_array(table, "file_exemptions")?
+            .into_iter()
+            .map(parse_lean_escape_hatch_file_exemption)
+            .collect::<Result<Vec<_>>>()?,
+    })
+}
+
+fn parse_lean_escape_hatch_file_exemption(
+    table: &toml::map::Map<String, toml::Value>,
+) -> Result<LeanEscapeHatchFileExemption> {
+    Ok(LeanEscapeHatchFileExemption {
+        path: required_string(table, "path")?,
+        kinds: optional_string_list(table, "kinds")?,
+        reason: required_string(table, "reason")?,
+    })
+}
+
 fn parse_docs_link_check_config(value: &toml::Value) -> Result<DocsLinkCheckConfig> {
     let table = expect_table(value, "checks.docs_link_check")?;
     Ok(DocsLinkCheckConfig {
@@ -491,6 +585,29 @@ fn parse_docs_semantic_drift_config(
         docs_roots: required_string_list(table, "docs_roots")?,
         manifest_path: required_string(table, "manifest_path")?,
         planned_crates: optional_string_list(table, "planned_crates")?,
+        file_exemptions: optional_string_list(table, "file_exemptions")?,
+    })
+}
+
+fn parse_text_formatting_config(
+    value: &toml::Value,
+) -> Result<TextFormattingConfig> {
+    let table = expect_table(value, "checks.text_formatting")?;
+    Ok(TextFormattingConfig {
+        enabled: required_bool(table, "enabled")?,
+        include_paths: required_string_list(table, "include_paths")?,
+        exclude_path_parts: optional_string_list(table, "exclude_path_parts")?,
+    })
+}
+
+fn parse_workspace_hygiene_config(
+    value: &toml::Value,
+) -> Result<WorkspaceHygieneConfig> {
+    let table = expect_table(value, "checks.workspace_hygiene")?;
+    Ok(WorkspaceHygieneConfig {
+        enabled: required_bool(table, "enabled")?,
+        include_paths: required_string_list(table, "include_paths")?,
+        exclude_path_parts: optional_string_list(table, "exclude_path_parts")?,
     })
 }
 
@@ -626,6 +743,21 @@ fn parse_dependency_policy_config(
     })
 }
 
+fn parse_workflow_actions_config(value: &toml::Value) -> Result<WorkflowActionsConfig> {
+    let table = expect_table(value, "checks.workflow_actions")?;
+    Ok(WorkflowActionsConfig {
+        enabled: required_bool(table, "enabled")?,
+        workflow_roots: match table.get("workflow_roots") {
+            | Some(value) => string_list(value, "workflow_roots")?,
+            | None => vec![".github/workflows".to_string()],
+        },
+        pin_comment_markers: match table.get("pin_comment_markers") {
+            | Some(value) => string_list(value, "pin_comment_markers")?,
+            | None => vec!["pin".to_string()],
+        },
+    })
+}
+
 fn expect_table<'a>(
     value: &'a toml::Value,
     context: &str,
@@ -699,6 +831,26 @@ fn optional_table_array<'a>(
     let mut out = Vec::with_capacity(items.len());
     for item in items {
         out.push(expect_table(item, key)?);
+    }
+    Ok(out)
+}
+
+fn optional_usize_map(
+    table: &toml::map::Map<String, toml::Value>,
+    key: &str,
+) -> Result<BTreeMap<String, usize>> {
+    let Some(value) = table.get(key) else {
+        return Ok(BTreeMap::new());
+    };
+    let map = expect_table(value, key)?;
+    let mut out = BTreeMap::new();
+    for (kind, value) in map {
+        let Some(raw) = value.as_integer() else {
+            bail!("`{key}` values must be integers");
+        };
+        let threshold = usize::try_from(raw)
+            .map_err(|_| anyhow::anyhow!("`{key}` values must be >= 0"))?;
+        out.insert(kind.clone(), threshold);
     }
     Ok(out)
 }

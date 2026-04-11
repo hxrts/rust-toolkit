@@ -83,9 +83,17 @@ Inside the toolkit Nix shell, the reusable command surface is:
 - `toolkit-fmt`
   Runs nightly `cargo fmt`, using either `--config <rustfmt.toml>` or the
   toolkit repo's own `rustfmt.toml`.
+- `toolkit-clippy`
+  Runs `cargo clippy` with the toolkit-pinned nightly toolchain.
 - `toolkit-xtask check lean-style`
   Runs the generic Lean source-style checker over repo-owned `.lean` trees
   using thresholds and exemptions from `policy/toolkit.toml`.
+- `toolkit-xtask check lean_escape_hatches`
+  Runs the generic Lean escape-hatch scanner over repo-owned `.lean` trees
+  using per-kind thresholds and file exemptions from `policy/toolkit.toml`.
+- `toolkit-xtask check workflow_actions`
+  Validates remote GitHub Action references in repo-owned workflow YAML files
+  and supports inline `pin` comment exemptions for intentionally pinned refs.
 - `toolkit-install-dylint`
   Installs `cargo-dylint` and `dylint-link`, then links the pinned nightly
   toolchain name used by toolkit lint runs.
@@ -214,6 +222,9 @@ bootstrap:
 ```bash
 ./scripts/toolkit-shell.sh toolkit-xtask check <name> --repo-root . --config policy/toolkit.toml
 ./scripts/toolkit-shell.sh toolkit-xtask check lean-style --repo-root . --config policy/toolkit.toml
+./scripts/toolkit-shell.sh toolkit-xtask check lean_escape_hatches --repo-root . --config policy/toolkit.toml
+./scripts/toolkit-shell.sh toolkit-xtask check workflow_actions --repo-root . --config policy/toolkit.toml
+./scripts/toolkit-shell.sh toolkit-clippy --workspace --all-targets -- -D warnings
 ./scripts/toolkit-shell.sh toolkit-install-dylint
 ./scripts/toolkit-shell.sh toolkit-dylint --repo-root . --toolkit-lint trait_purity --all -- --all-targets
 ./scripts/toolkit-shell.sh toolkit-dylint --repo-root . --lint-path ./policy/lints/model_policy --all -- --all-targets

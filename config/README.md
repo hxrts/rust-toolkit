@@ -42,6 +42,7 @@ Lean source-style check is configured in the consuming repo with keys such as:
 - `checks.lean_style.require_section_headers`
 - `checks.lean_style.require_explanatory_comment_for_long_blocks`
 - `checks.lean_style.require_public_theorem_lemma_docstrings`
+- `checks.lean_style.forbid_sorry`
 - `checks.lean_style.banned_imports`
 - `checks.lean_style.banned_import_exemptions`
 - `checks.lean_style.require_todo_for_sorry`
@@ -52,3 +53,11 @@ Lean source-style check is configured in the consuming repo with keys such as:
 Keep Rust and Lean policy keys visibly separated in consuming-repo examples.
 Mixed repos can use both, but the toolkit config surface should still make it
 clear which keys apply to Rust files and which apply to Lean files.
+
+Additional generic text and workspace checks can use keys such as:
+
+- `checks.text_formatting.include_paths`
+- `checks.text_formatting.exclude_path_parts`
+- `checks.workspace_hygiene.include_paths`
+- `checks.workspace_hygiene.exclude_path_parts`
+- `checks.docs_semantic_drift.file_exemptions`

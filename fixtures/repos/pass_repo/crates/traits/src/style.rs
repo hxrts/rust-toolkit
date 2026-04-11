@@ -1,3 +1,4 @@
+#[public_model]
 pub enum Mode {
     Enabled,
     Disabled,

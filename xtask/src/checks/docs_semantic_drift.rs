@@ -156,6 +156,8 @@ pub fn run(
             .map(|item| item.replace('-', "_")),
     );
     let just_recipes = just_recipes(repo_root)?;
+    let exempt_files: BTreeSet<&str> =
+        check.file_exemptions.iter().map(String::as_str).collect();
     let env = SnippetEnv {
         identifiers: &identifiers,
         crate_tokens: &crate_tokens,
@@ -165,6 +167,9 @@ pub fn run(
 
     for file in collect_markdown_files(repo_root, &check.docs_roots)? {
         let rel_file = normalize_rel_path(repo_root, &file);
+        if exempt_files.contains(rel_file.as_str()) {
+            continue;
+        }
         let contents = std::fs::read_to_string(&file)
             .with_context(|| format!("reading {}", file.display()))?;
         let mut in_code_block = false;
@@ -205,6 +210,9 @@ fn check_snippet(
 ) {
     let snippet = snippet.trim();
     if snippet.is_empty() {
+        return;
+    }
+    if should_skip_snippet(snippet) {
         return;
     }
     if snippet.contains('-') && !snippet.contains('/') && !snippet.contains("::") {
@@ -251,7 +259,10 @@ fn check_snippet(
         }
         return;
     }
-    if let Some(root_ident) = root_identifier(snippet) {
+    if looks_like_simple_symbol(snippet) {
+        let Some(root_ident) = root_identifier(snippet) else {
+            return;
+        };
         if root_ident
             .chars()
             .next()
@@ -268,10 +279,38 @@ fn check_snippet(
 }
 
 fn looks_like_path(snippet: &str) -> bool {
-    matches!(snippet, "CLAUDE.md" | "Cargo.toml" | "justfile")
+    matches!(snippet, "AGENTS.md" | "CLAUDE.md" | "Cargo.toml" | "justfile")
         || ["docs/", "crates/", "scripts/", "lints/", "nix/", ".github/", "toolkit/"]
             .iter()
             .any(|prefix| snippet.starts_with(prefix))
+        || snippet.ends_with(".md")
+        || snippet.ends_with(".rs")
+        || snippet.ends_with(".sh")
+        || snippet.ends_with(".toml")
+        || snippet.ends_with(".lean")
+        || snippet.ends_with(".qnt")
+        || snippet.ends_with(".json")
+}
+
+fn should_skip_snippet(snippet: &str) -> bool {
+    snippet.contains('*')
+        || snippet.contains('\\')
+        || snippet.contains('{')
+        || snippet.contains('}')
+        || snippet.contains('(')
+        || snippet.contains(')')
+        || snippet.contains('[')
+        || snippet.contains(']')
+        || snippet.contains('=')
+        || snippet.contains('+')
+        || snippet.contains(' ')
+}
+
+fn looks_like_simple_symbol(snippet: &str) -> bool {
+    !snippet.contains("::")
+        && snippet
+            .chars()
+            .all(|ch| ch.is_ascii_alphanumeric() || ch == '_')
 }
 
 fn root_identifier(snippet: &str) -> Option<&str> {
@@ -301,4 +340,30 @@ pub fn run_or_fail(repo_root: &std::path::Path, config: &ToolkitConfig) -> Resul
         eprintln!("{entry}");
     }
     bail!("docs-semantic-drift failed")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{looks_like_path, looks_like_simple_symbol, should_skip_snippet};
+
+    #[test]
+    fn semantic_drift_skips_math_and_wildcards() {
+        assert!(should_skip_snippet("C_{t+1} = C_t"));
+        assert!(should_skip_snippet("docs/1xx_*.md"));
+        assert!(!should_skip_snippet("AuthorityId"));
+    }
+
+    #[test]
+    fn semantic_drift_recognizes_common_paths() {
+        assert!(looks_like_path("AGENTS.md"));
+        assert!(looks_like_path("docs/000_project_overview.md"));
+        assert!(!looks_like_path("AuthorityId"));
+    }
+
+    #[test]
+    fn semantic_drift_only_treats_identifier_like_snippets_as_symbols() {
+        assert!(looks_like_simple_symbol("AuthorityId"));
+        assert!(!looks_like_simple_symbol("Specified only"));
+        assert!(!looks_like_simple_symbol("DefaultBudget(n)"));
+    }
 }

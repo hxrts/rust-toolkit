@@ -7,3 +7,5 @@ Use `just missing`.
 See `crates/traits/src/missing.rs`.
 
 The symbol `UnknownType` is not real.
+
+Bad emoji ✅.

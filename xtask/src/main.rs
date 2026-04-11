@@ -32,6 +32,10 @@ fn main() {
 fn run() -> Result<()> {
     let args: Vec<String> = env::args().skip(1).collect();
     match args.first().map(String::as_str) {
+        | Some("--help") | Some("-h") | Some("help") => {
+            println!("toolkit-xtask: usage: check|parity|show-config|fmt|fmt-check|clippy|dylint");
+            Ok(())
+        },
         | Some("check") => run_check(&args[1..]),
         | Some("parity") => run_parity(&args[1..]),
         | Some("show-config") => show_config(&args[1..]),
@@ -53,7 +57,8 @@ fn run() -> Result<()> {
 fn run_check(args: &[String]) -> Result<()> {
     let (name, repo_root, config_path) = parse_check_args(args)?;
     let config = config::load(&config_path)?;
-    let findings = match name.as_str() {
+    let normalized_name = name.replace('_', "-");
+    let findings = match normalized_name.as_str() {
         | "proc-macro-scope" => checks::proc_macro_scope::run(&repo_root, &config)?,
         | "crate-root-policy" => {
             let findings = checks::crate_root_policy::run(&repo_root, &config)?;
@@ -140,6 +145,26 @@ fn run_check(args: &[String]) -> Result<()> {
             print_flat_findings(name.as_str(), &findings);
             return if findings.is_empty() { Ok(()) } else { bail!("{name} failed") };
         },
+        | "workflow-actions" => {
+            let findings = checks::workflow_actions::run(&repo_root, &config)?;
+            print_flat_findings(name.as_str(), &findings);
+            return if findings.is_empty() { Ok(()) } else { bail!("{name} failed") };
+        },
+        | "lean-escape-hatches" => {
+            let findings = checks::lean_escape_hatches::run(&repo_root, &config)?;
+            print_flat_findings(name.as_str(), &findings);
+            return if findings.is_empty() { Ok(()) } else { bail!("{name} failed") };
+        },
+        | "text-formatting" => {
+            let findings = checks::text_formatting::run(&repo_root, &config)?;
+            print_flat_findings(name.as_str(), &findings);
+            return if findings.is_empty() { Ok(()) } else { bail!("{name} failed") };
+        },
+        | "workspace-hygiene" => {
+            let findings = checks::workspace_hygiene::run(&repo_root, &config)?;
+            print_flat_findings(name.as_str(), &findings);
+            return if findings.is_empty() { Ok(()) } else { bail!("{name} failed") };
+        },
         | _ => bail!("toolkit-xtask: unknown check: {name}"),
     };
     print_findings(name.as_str(), &findings);
@@ -153,7 +178,7 @@ fn run_check(args: &[String]) -> Result<()> {
 fn run_parity(args: &[String]) -> Result<()> {
     let (name, repo_root, config_path) = parse_check_args(args)?;
     let config = config::load(&config_path)?;
-    match name.as_str() {
+    match name.replace('_', "-").as_str() {
         | "proc-macro-scope" => {
             let toolkit = checks::proc_macro_scope::run(&repo_root, &config)?;
             let legacy = legacy::run_proc_macro_scope(&repo_root)?;
