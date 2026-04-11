@@ -228,10 +228,33 @@
 
           host="$(${rustToolchainNightly}/bin/rustc -vV | awk '/^host: / { print $2 }')"
           toolchain_name="toolkit-nightly-''${host}"
+          toolchain_cache_suffix="$(${rustToolchainNightly}/bin/rustc -vV | awk '
+            /^release: / {
+              release=$2
+              gsub(/[^A-Za-z0-9._-]/, "-", release)
+            }
+            /^commit-hash: / {
+              commit=substr($2, 1, 12)
+            }
+            END {
+              if (release == "") {
+                release="unknown-release"
+              }
+              if (commit != "") {
+                print release "-" commit
+              } else {
+                print release
+              }
+            }
+          ')"
           resolved_lint_path="$lint_path"
           copied_lint_dir=""
           temp_toolchain_file=""
           created_temp_toolchain=0
+          dylint_target_dir="''${repo_root:-$PWD}/target/dylint/libraries/$toolchain_name"
+          dylint_toolchain_stamp="$dylint_target_dir/.toolkit-rustc-version"
+          dylint_workspace_target_dir="''${repo_root:-$PWD}/target/dylint/target/$toolchain_name"
+          dylint_workspace_toolchain_stamp="$dylint_workspace_target_dir/.toolkit-rustc-version"
 
           if [ ! -w "$lint_path" ]; then
             copied_lint_dir="$(mktemp -d "''${TMPDIR:-/tmp}/toolkit-dylint.XXXXXX")"
@@ -269,6 +292,20 @@ EOF
           }
           trap cleanup EXIT
 
+          if [ -d "$dylint_target_dir" ]; then
+            if [ ! -f "$dylint_toolchain_stamp" ] || [ "$(cat "$dylint_toolchain_stamp")" != "$toolchain_cache_suffix" ]; then
+              rm -rf "$dylint_target_dir"
+            fi
+          fi
+          if [ -d "$dylint_workspace_target_dir" ]; then
+            if [ ! -f "$dylint_workspace_toolchain_stamp" ] || [ "$(cat "$dylint_workspace_toolchain_stamp")" != "$toolchain_cache_suffix" ]; then
+              rm -rf "$dylint_workspace_target_dir"
+            fi
+          fi
+          mkdir -p "$dylint_target_dir"
+          mkdir -p "$dylint_workspace_target_dir"
+          printf '%s\n' "$toolchain_cache_suffix" > "$dylint_toolchain_stamp"
+          printf '%s\n' "$toolchain_cache_suffix" > "$dylint_workspace_toolchain_stamp"
           ${rustToolchainNightly}/bin/cargo dylint --path "$resolved_lint_path" "$@"
         '';
 
@@ -285,7 +322,11 @@ EOF
           packages = [
             toolkitPackages.toolkit-xtask
             toolkitPackages.toolkit-fmt
+            toolkitPackages.toolkit-clippy
             toolkitPackages.toolkit-cargo-fmt-nightly
+            toolkitPackages.toolkit-install-dylint
+            toolkitPackages.toolkit-dylint-link
+            toolkitPackages.toolkit-dylint
           ];
           buildInputs =
             with pkgs;
