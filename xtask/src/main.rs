@@ -135,6 +135,11 @@ fn run_check(args: &[String]) -> Result<()> {
             print_flat_findings(name.as_str(), &findings);
             return if findings.is_empty() { Ok(()) } else { bail!("{name} failed") };
         },
+        | "lean-architecture" => {
+            let findings = checks::lean_architecture::run(&repo_root, &config)?;
+            print_flat_findings(name.as_str(), &findings);
+            return if findings.is_empty() { Ok(()) } else { bail!("{name} failed") };
+        },
         | "docs-link-check" => {
             let findings = checks::docs_link_check::run(&repo_root, &config)?;
             print_flat_findings(name.as_str(), &findings);
@@ -142,6 +147,11 @@ fn run_check(args: &[String]) -> Result<()> {
         },
         | "docs-semantic-drift" => {
             let findings = checks::docs_semantic_drift::run(&repo_root, &config)?;
+            print_flat_findings(name.as_str(), &findings);
+            return if findings.is_empty() { Ok(()) } else { bail!("{name} failed") };
+        },
+        | "docs-prose-quality" => {
+            let findings = checks::docs_prose_quality::run(&repo_root, &config)?;
             print_flat_findings(name.as_str(), &findings);
             return if findings.is_empty() { Ok(()) } else { bail!("{name} failed") };
         },
@@ -162,6 +172,16 @@ fn run_check(args: &[String]) -> Result<()> {
         },
         | "workspace-hygiene" => {
             let findings = checks::workspace_hygiene::run(&repo_root, &config)?;
+            print_flat_findings(name.as_str(), &findings);
+            return if findings.is_empty() { Ok(()) } else { bail!("{name} failed") };
+        },
+        | "workspace-layering" => {
+            let findings = checks::workspace_layering::run(&repo_root, &config)?;
+            print_flat_findings(name.as_str(), &findings);
+            return if findings.is_empty() { Ok(()) } else { bail!("{name} failed") };
+        },
+        | "rust-architecture" => {
+            let findings = checks::rust_architecture::run(&repo_root, &config)?;
             print_flat_findings(name.as_str(), &findings);
             return if findings.is_empty() { Ok(()) } else { bail!("{name} failed") };
         },

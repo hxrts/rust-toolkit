@@ -91,9 +91,20 @@ Inside the toolkit Nix shell, the reusable command surface is:
 - `toolkit-xtask check lean_escape_hatches`
   Runs the generic Lean escape-hatch scanner over repo-owned `.lean` trees
   using per-kind thresholds and file exemptions from `policy/toolkit.toml`.
+- `toolkit-xtask check lean_architecture`
+  Runs the generic Lean architecture guardrails for placeholder contracts,
+  root-facade imports, and migrated theorem-pack boundaries.
 - `toolkit-xtask check workflow_actions`
   Validates remote GitHub Action references in repo-owned workflow YAML files
   and supports inline `pin` comment exemptions for intentionally pinned refs.
+- `toolkit-xtask check docs_prose_quality`
+  Runs the generic Markdown prose-structure checks for punctuation, fenced
+  block follow-up prose, and prose-to-code balance.
+- `toolkit-xtask check workspace_layering`
+  Validates a repo-owned workspace crate layer map against `cargo metadata`.
+- `toolkit-xtask check rust_architecture`
+  Runs the generic Rust architecture guardrails for fixed-point boundaries,
+  deterministic scope bans, and kernel side-effect boundaries.
 - `toolkit-install-dylint`
   Installs `cargo-dylint` and `dylint-link`, then links the pinned nightly
   toolchain name used by toolkit lint runs.
@@ -223,7 +234,11 @@ bootstrap:
 ./scripts/toolkit-shell.sh toolkit-xtask check <name> --repo-root . --config policy/toolkit.toml
 ./scripts/toolkit-shell.sh toolkit-xtask check lean-style --repo-root . --config policy/toolkit.toml
 ./scripts/toolkit-shell.sh toolkit-xtask check lean_escape_hatches --repo-root . --config policy/toolkit.toml
+./scripts/toolkit-shell.sh toolkit-xtask check lean_architecture --repo-root . --config policy/toolkit.toml
 ./scripts/toolkit-shell.sh toolkit-xtask check workflow_actions --repo-root . --config policy/toolkit.toml
+./scripts/toolkit-shell.sh toolkit-xtask check docs_prose_quality --repo-root . --config policy/toolkit.toml
+./scripts/toolkit-shell.sh toolkit-xtask check workspace_layering --repo-root . --config policy/toolkit.toml
+./scripts/toolkit-shell.sh toolkit-xtask check rust_architecture --repo-root . --config policy/toolkit.toml
 ./scripts/toolkit-shell.sh toolkit-clippy --workspace --all-targets -- -D warnings
 ./scripts/toolkit-shell.sh toolkit-install-dylint
 ./scripts/toolkit-shell.sh toolkit-dylint --repo-root . --toolkit-lint trait_purity --all -- --all-targets

@@ -58,17 +58,36 @@ fn fail_fixture_reports_expected_findings() {
         .iter()
         .any(|entry| entry.contains("lean escape hatch `sorry`")));
 
+    let lean_architecture = checks::lean_architecture::run(&repo_root, &cfg).unwrap();
+    assert!(lean_architecture.entries.iter().any(|entry| {
+        entry.contains("placeholder contract `Prop := True`")
+            || entry.contains("root facade imports debug/example/test modules")
+    }));
+
     let text_formatting = checks::text_formatting::run(&repo_root, &cfg).unwrap();
     assert!(text_formatting
         .entries
         .iter()
         .any(|entry| entry.contains("forbidden emoji detected")));
 
+    let docs_prose_quality = checks::docs_prose_quality::run(&repo_root, &cfg).unwrap();
+    assert!(docs_prose_quality.entries.iter().any(|entry| {
+        entry.contains("semicolon is not allowed")
+            || entry.contains("code block must be followed by an explanatory paragraph")
+            || entry.contains("explanatory text after code block must be prose")
+    }));
+
     let workspace_hygiene = checks::workspace_hygiene::run(&repo_root, &cfg).unwrap();
     assert!(workspace_hygiene
         .entries
         .iter()
         .any(|entry| entry.contains("lonely mod.rs")));
+
+    let workspace_layering = checks::workspace_layering::run(&repo_root, &cfg).unwrap();
+    assert!(workspace_layering.entries.iter().any(|entry| {
+        entry.contains("depends on higher-layer crate")
+            || entry.contains("missing from `checks.workspace_layering.crate_layers`")
+    }));
 
     let crate_root = checks::crate_root_policy::run(&repo_root, &cfg).unwrap();
     assert!(crate_root
@@ -87,6 +106,14 @@ fn fail_fixture_reports_expected_findings() {
         .entries
         .iter()
         .any(|entry| entry.contains("unsafe")));
+
+    let rust_architecture = checks::rust_architecture::run(&repo_root, &cfg).unwrap();
+    assert!(rust_architecture.entries.iter().any(|entry| {
+        entry.contains("raw `fixed::` usage is forbidden")
+            || entry.contains("float-typed public config/schema field is forbidden")
+            || entry.contains("FixedQ32 must not accept float-token decoding")
+            || entry.contains("direct thread scheduling and timer calls are forbidden")
+    }));
 
     let bool_param = checks::bool_param::run(&repo_root, &cfg).unwrap();
     assert!(bool_param
@@ -169,10 +196,19 @@ fn pass_fixture_reports_no_findings() {
     assert!(checks::lean_escape_hatches::run(&repo_root, &cfg)
         .unwrap()
         .is_empty());
+    assert!(checks::lean_architecture::run(&repo_root, &cfg)
+        .unwrap()
+        .is_empty());
     assert!(checks::text_formatting::run(&repo_root, &cfg)
         .unwrap()
         .is_empty());
+    assert!(checks::docs_prose_quality::run(&repo_root, &cfg)
+        .unwrap()
+        .is_empty());
     assert!(checks::workspace_hygiene::run(&repo_root, &cfg)
+        .unwrap()
+        .is_empty());
+    assert!(checks::workspace_layering::run(&repo_root, &cfg)
         .unwrap()
         .is_empty());
     assert!(checks::crate_root_policy::run(&repo_root, &cfg)
@@ -182,6 +218,9 @@ fn pass_fixture_reports_no_findings() {
         .unwrap()
         .is_empty());
     assert!(checks::unsafe_boundary::run(&repo_root, &cfg)
+        .unwrap()
+        .is_empty());
+    assert!(checks::rust_architecture::run(&repo_root, &cfg)
         .unwrap()
         .is_empty());
     assert!(checks::bool_param::run(&repo_root, &cfg)

@@ -128,10 +128,6 @@ fn is_markdown_list(trimmed: &str) -> bool {
     trimmed.starts_with("- ")
         || trimmed.starts_with("* ")
         || trimmed.starts_with("+ ")
-        || trimmed
-            .chars()
-            .take_while(|ch| ch.is_ascii_digit())
-            .count()
-            > 0
+        || trimmed.chars().take_while(|ch| ch.is_ascii_digit()).count() > 0
             && (trimmed.contains(". ") || trimmed.contains(") "))
 }

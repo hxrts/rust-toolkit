@@ -115,14 +115,18 @@ fn return_type_allowed(ty: &Type, allowed_prefixes: &[String]) -> bool {
     let Some(root_ident) = root_type_ident(ty) else {
         return false;
     };
-    allowed_prefixes.iter().any(|allowed| allowed == &root_ident)
+    allowed_prefixes
+        .iter()
+        .any(|allowed| allowed == &root_ident)
 }
 
 fn root_type_ident(ty: &Type) -> Option<String> {
     match ty {
-        Type::Path(type_path) => {
-            type_path.path.segments.last().map(|segment| segment.ident.to_string())
-        }
-        _ => None,
+        | Type::Path(type_path) => type_path
+            .path
+            .segments
+            .last()
+            .map(|segment| segment.ident.to_string()),
+        | _ => None,
     }
 }

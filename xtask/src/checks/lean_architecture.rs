@@ -18,16 +18,17 @@ pub fn run(repo_root: &Path, config: &ToolkitConfig) -> Result<FlatFindingSet> {
     }
 
     let placeholder_re = Regex::new(r"\bProp\s*:=\s*True\b")?;
-    let root_import_re = Regex::new(
-        r"^import .*\b(MutualTest|LocalTypeDBExamples|Examples|Tests)\b",
-    )?;
+    let root_import_re =
+        Regex::new(r"^import .*\b(MutualTest|LocalTypeDBExamples|Examples|Tests)\b")?;
     let legacy_projection_re = Regex::new(
         r"^import\s+Choreography\.Projection\.(Trans|Projectb|ProjectProps|Embed|EmbedProps|Erasure|Regression)\b",
     )?;
     let theorempack_re = Regex::new(r"^import\s+Runtime\.Proofs\.TheoremPack$")?;
 
     let mut findings = FlatFindingSet::default();
-    for path in collect_lean_files(repo_root, &check.include_paths, &check.exclude_path_parts)? {
+    for path in
+        collect_lean_files(repo_root, &check.include_paths, &check.exclude_path_parts)?
+    {
         let rel = normalize_rel_path(repo_root, &path);
         let source = fs::read_to_string(&path)
             .with_context(|| format!("reading {}", path.display()))?;

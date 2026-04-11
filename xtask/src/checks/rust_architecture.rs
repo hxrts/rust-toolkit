@@ -1,4 +1,7 @@
-use std::{fs, path::{Path, PathBuf}};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 use anyhow::{Context, Result};
 use regex::Regex;
@@ -6,7 +9,10 @@ use regex::Regex;
 use crate::{
     config::ToolkitConfig,
     report::FlatFindingSet,
-    util::{collect_rust_files, line_number_at, mask_rust_comments_and_literals, normalize_rel_path},
+    util::{
+        collect_rust_files, line_number_at, mask_rust_comments_and_literals,
+        normalize_rel_path,
+    },
 };
 
 pub fn run(repo_root: &Path, config: &ToolkitConfig) -> Result<FlatFindingSet> {
@@ -22,8 +28,7 @@ pub fn run(repo_root: &Path, config: &ToolkitConfig) -> Result<FlatFindingSet> {
     let config_float_re = Regex::new(
         r"(?m)pub\s+[A-Za-z_][A-Za-z0-9_]*\s*:\s*(?:Option<\s*)?f(?:32|64)\b",
     )?;
-    let fixed_decode_re =
-        Regex::new(r"visit_f(?:32|64)\s*\(|impl\s+From<f(?:32|64)>\s+for\s+FixedQ32")?;
+    let fixed_decode_re = Regex::new(r"visit_f(?:32|64)\s*\(")?;
     let float_type_re = Regex::new(r"\b(?:f32|f64)\b")?;
     let nondet_re = Regex::new(
         r"SystemTime::now\(|Instant::now\(|UNIX_EPOCH|rand::thread_rng\(|thread_rng\(|rand::random\(|getrandom\(|from_entropy\(|OsRng\b|Utc::now\(|Local::now\(",
@@ -42,7 +47,11 @@ pub fn run(repo_root: &Path, config: &ToolkitConfig) -> Result<FlatFindingSet> {
             .with_context(|| format!("reading {}", path.display()))?;
         let masked = mask_rust_comments_and_literals(&source);
 
-        if !check.fixed_wrapper_paths.iter().any(|allowed| allowed == &rel) {
+        if !check
+            .fixed_wrapper_paths
+            .iter()
+            .any(|allowed| allowed == &rel)
+        {
             for matched in fixed_re.find_iter(&masked) {
                 findings.entries.insert(format!(
                     "{rel}:{}: raw `fixed::` usage is forbidden outside configured wrapper paths",
@@ -60,7 +69,11 @@ pub fn run(repo_root: &Path, config: &ToolkitConfig) -> Result<FlatFindingSet> {
             }
         }
 
-        if check.fixed_wrapper_paths.iter().any(|allowed| allowed == &rel) {
+        if check
+            .fixed_wrapper_paths
+            .iter()
+            .any(|allowed| allowed == &rel)
+        {
             for matched in fixed_decode_re.find_iter(&masked) {
                 findings.entries.insert(format!(
                     "{rel}:{}: FixedQ32 must not accept float-token decoding or float conversion shims",

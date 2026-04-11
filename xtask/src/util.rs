@@ -68,7 +68,10 @@ pub fn normalize_rel_path(root: &Path, path: &Path) -> String {
         .replace('\\', "/")
 }
 
-pub fn rust_policy_path_excluded(rel_path: &str, exclude_path_parts: &[String]) -> bool {
+pub fn rust_policy_path_excluded(
+    rel_path: &str,
+    exclude_path_parts: &[String],
+) -> bool {
     rel_path.contains("/tests/")
         || rel_path.contains("/benches/")
         || rel_path.contains("/examples/")
@@ -333,7 +336,7 @@ pub fn mask_rust_comments_and_literals(source: &str) -> String {
     let mut state = State::Code;
     while idx < bytes.len() {
         match state {
-            State::Code => {
+            | State::Code => {
                 if bytes[idx] == b'/' && bytes.get(idx + 1) == Some(&b'/') {
                     push_masked(&mut out, bytes[idx]);
                     push_masked(&mut out, bytes[idx + 1]);
@@ -359,7 +362,9 @@ pub fn mask_rust_comments_and_literals(source: &str) -> String {
                     }
                 }
                 if bytes[idx] == b'b' && bytes.get(idx + 1) == Some(&b'r') {
-                    if let Some((hashes, consumed)) = raw_string_prefix(&bytes[idx + 1..]) {
+                    if let Some((hashes, consumed)) =
+                        raw_string_prefix(&bytes[idx + 1..])
+                    {
                         push_masked(&mut out, bytes[idx]);
                         for byte in &bytes[idx + 1..idx + 1 + consumed] {
                             push_masked(&mut out, *byte);
@@ -369,7 +374,9 @@ pub fn mask_rust_comments_and_literals(source: &str) -> String {
                         continue;
                     }
                 }
-                if bytes[idx] == b'"' || (bytes[idx] == b'b' && bytes.get(idx + 1) == Some(&b'"')) {
+                if bytes[idx] == b'"'
+                    || (bytes[idx] == b'b' && bytes.get(idx + 1) == Some(&b'"'))
+                {
                     push_masked(&mut out, bytes[idx]);
                     idx += 1;
                     if bytes.get(idx - 1) == Some(&b'b') {
@@ -387,15 +394,15 @@ pub fn mask_rust_comments_and_literals(source: &str) -> String {
                 }
                 out.push(bytes[idx] as char);
                 idx += 1;
-            }
-            State::LineComment => {
+            },
+            | State::LineComment => {
                 push_masked(&mut out, bytes[idx]);
                 if bytes[idx] == b'\n' {
                     state = State::Code;
                 }
                 idx += 1;
-            }
-            State::BlockComment(depth) => {
+            },
+            | State::BlockComment(depth) => {
                 if bytes[idx] == b'/' && bytes.get(idx + 1) == Some(&b'*') {
                     push_masked(&mut out, bytes[idx]);
                     push_masked(&mut out, bytes[idx + 1]);
@@ -416,8 +423,8 @@ pub fn mask_rust_comments_and_literals(source: &str) -> String {
                 }
                 push_masked(&mut out, bytes[idx]);
                 idx += 1;
-            }
-            State::String => {
+            },
+            | State::String => {
                 push_masked(&mut out, bytes[idx]);
                 if bytes[idx] == b'\\' {
                     idx += 1;
@@ -431,8 +438,8 @@ pub fn mask_rust_comments_and_literals(source: &str) -> String {
                     state = State::Code;
                 }
                 idx += 1;
-            }
-            State::Char => {
+            },
+            | State::Char => {
                 push_masked(&mut out, bytes[idx]);
                 if bytes[idx] == b'\\' {
                     idx += 1;
@@ -446,10 +453,12 @@ pub fn mask_rust_comments_and_literals(source: &str) -> String {
                     state = State::Code;
                 }
                 idx += 1;
-            }
-            State::RawString(hashes) => {
+            },
+            | State::RawString(hashes) => {
                 push_masked(&mut out, bytes[idx]);
-                if bytes[idx] == b'"' && raw_string_terminator_matches(bytes, idx + 1, hashes) {
+                if bytes[idx] == b'"'
+                    && raw_string_terminator_matches(bytes, idx + 1, hashes)
+                {
                     idx += 1;
                     for _ in 0..hashes {
                         if let Some(byte) = bytes.get(idx) {
@@ -461,7 +470,7 @@ pub fn mask_rust_comments_and_literals(source: &str) -> String {
                     continue;
                 }
                 idx += 1;
-            }
+            },
         }
     }
     out

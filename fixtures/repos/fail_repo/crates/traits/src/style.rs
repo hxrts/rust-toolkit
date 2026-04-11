@@ -1,4 +1,5 @@
 pub fn set_enabled(enabled: bool) -> u32 {
+    let _raw_fixed: fixed::types::I32F32 = fixed::types::I32F32::from_num(1);
     let timeout = 10;
     let retry_backoff = 3;
     let _ = compute_status();
@@ -36,4 +37,8 @@ impl Drop for Cleaner {
 
 pub fn unchecked_unsafe() -> u8 {
     unsafe { std::ptr::read(std::ptr::null::<u8>()) }
+}
+
+pub async fn wait_once() {
+    tokio::time::sleep(std::time::Duration::from_secs(1)).await;
 }

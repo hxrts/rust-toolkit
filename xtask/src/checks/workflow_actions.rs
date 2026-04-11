@@ -61,7 +61,8 @@ fn collect_workflow_files(root: &Path, workflow_roots: &[String]) -> Vec<PathBuf
             if !entry.file_type().is_file() {
                 continue;
             }
-            let Some(ext) = entry.path().extension().and_then(|ext| ext.to_str()) else {
+            let Some(ext) = entry.path().extension().and_then(|ext| ext.to_str())
+            else {
                 continue;
             };
             if ext != "yml" && ext != "yaml" {
@@ -105,7 +106,10 @@ fn scan_workflow(
             continue;
         }
 
-        let comment = captures.get(2).map(|item| item.as_str()).unwrap_or_default();
+        let comment = captures
+            .get(2)
+            .map(|item| item.as_str())
+            .unwrap_or_default();
         if has_pin_comment(comment, &check.pin_comment_markers) {
             continue;
         }

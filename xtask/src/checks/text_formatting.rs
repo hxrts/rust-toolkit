@@ -2,10 +2,7 @@ use std::{fs, path::Path};
 
 use anyhow::{Context, Result};
 
-use crate::{
-    config::ToolkitConfig,
-    report::FlatFindingSet,
-};
+use crate::{config::ToolkitConfig, report::FlatFindingSet};
 
 pub fn run(repo_root: &Path, config: &ToolkitConfig) -> Result<FlatFindingSet> {
     let Some(check) = &config.checks.text_formatting else {
@@ -58,8 +55,7 @@ fn scan_file(
         | Ok(contents) => contents,
         | Err(err) if err.kind() == std::io::ErrorKind::InvalidData => return Ok(()),
         | Err(err) => {
-            return Err(err)
-                .with_context(|| format!("reading {}", path.display()))
+            return Err(err).with_context(|| format!("reading {}", path.display()))
         },
     };
     for (line_no, line) in contents.lines().enumerate() {
@@ -76,9 +72,9 @@ fn contains_forbidden_emoji(line: &str) -> bool {
     line.contains('✅')
         || line.contains('❌')
         || line.contains("⚠️")
-        || line.chars().any(|ch| {
-            matches!(ch as u32, 0x1F300..=0x1F9FF | 0x1FA00..=0x1FAFF)
-        })
+        || line
+            .chars()
+            .any(|ch| matches!(ch as u32, 0x1F300..=0x1F9FF | 0x1FA00..=0x1FAFF))
 }
 
 fn normalize_rel_path(root: &Path, path: &Path) -> String {

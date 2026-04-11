@@ -2,9 +2,8 @@ use std::{fs, path::Path};
 
 use anyhow::{Context, Result};
 use syn::{
-    spanned::Spanned,
-    visit::Visit,
-    Expr, ExprCall, ExprMethodCall, ImplItem, ImplItemFn, ItemFn, ItemImpl, Stmt, Visibility,
+    spanned::Spanned, visit::Visit, Expr, ExprCall, ExprMethodCall, ImplItem,
+    ImplItemFn, ItemFn, ItemImpl, Stmt, Visibility,
 };
 
 use crate::{
@@ -165,12 +164,12 @@ fn call_targets_name(expr: &Expr, target_name: &str) -> bool {
     }
     let segments: Vec<_> = expr_path.path.segments.iter().collect();
     match segments.as_slice() {
-        [segment] => segment.ident == target_name,
-        [prefix, segment] => {
+        | [segment] => segment.ident == target_name,
+        | [prefix, segment] => {
             segment.ident == target_name
                 && matches!(prefix.ident.to_string().as_str(), "Self" | "self")
-        }
-        _ => false,
+        },
+        | _ => false,
     }
 }
 

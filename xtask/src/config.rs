@@ -527,33 +527,18 @@ fn parse_lean_style_config(value: &toml::Value) -> Result<LeanStyleConfig> {
         include_paths: required_string_list(table, "include_paths")?,
         exclude_path_parts: optional_string_list(table, "exclude_path_parts")?,
         non_trivial_file_lines: required_usize(table, "non_trivial_file_lines")?,
-        section_header_min_lines: required_usize(
-            table,
-            "section_header_min_lines",
-        )?,
+        section_header_min_lines: required_usize(table, "section_header_min_lines")?,
         max_file_lines: required_usize(table, "max_file_lines")?,
         max_decl_lines_target: required_usize(table, "max_decl_lines_target")?,
-        max_decl_lines_hard_limit: required_usize(
-            table,
-            "max_decl_lines_hard_limit",
-        )?,
-        enforce_target_decl_lines: required_bool(
-            table,
-            "enforce_target_decl_lines",
-        )?,
-        require_problem_statement: required_bool(
-            table,
-            "require_problem_statement",
-        )?,
+        max_decl_lines_hard_limit: required_usize(table, "max_decl_lines_hard_limit")?,
+        enforce_target_decl_lines: required_bool(table, "enforce_target_decl_lines")?,
+        require_problem_statement: required_bool(table, "require_problem_statement")?,
         enforce_top_of_file_structure: required_bool(
             table,
             "enforce_top_of_file_structure",
         )?,
         require_section_headers: required_bool(table, "require_section_headers")?,
-        require_over_limit_comment: required_bool(
-            table,
-            "require_over_limit_comment",
-        )?,
+        require_over_limit_comment: required_bool(table, "require_over_limit_comment")?,
         require_explanatory_comment_for_long_blocks: required_bool(
             table,
             "require_explanatory_comment_for_long_blocks",
@@ -578,13 +563,10 @@ fn parse_lean_style_config(value: &toml::Value) -> Result<LeanStyleConfig> {
             .into_iter()
             .map(parse_lean_style_file_exemption)
             .collect::<Result<Vec<_>>>()?,
-        declaration_exemptions: optional_table_array(
-            table,
-            "declaration_exemptions",
-        )?
-        .into_iter()
-        .map(parse_lean_style_declaration_exemption)
-        .collect::<Result<Vec<_>>>()?,
+        declaration_exemptions: optional_table_array(table, "declaration_exemptions")?
+            .into_iter()
+            .map(parse_lean_style_declaration_exemption)
+            .collect::<Result<Vec<_>>>()?,
     })
 }
 
@@ -689,16 +671,11 @@ fn parse_docs_prose_quality_config(
             table,
             "require_explanatory_prose_after_code",
         )?,
-        require_prose_exceeds_code: required_bool(
-            table,
-            "require_prose_exceeds_code",
-        )?,
+        require_prose_exceeds_code: required_bool(table, "require_prose_exceeds_code")?,
     })
 }
 
-fn parse_text_formatting_config(
-    value: &toml::Value,
-) -> Result<TextFormattingConfig> {
+fn parse_text_formatting_config(value: &toml::Value) -> Result<TextFormattingConfig> {
     let table = expect_table(value, "checks.text_formatting")?;
     Ok(TextFormattingConfig {
         enabled: required_bool(table, "enabled")?,
@@ -776,10 +753,7 @@ fn parse_rust_architecture_config(
             table,
             "determinism_runtime_paths",
         )?,
-        determinism_test_paths: optional_string_list(
-            table,
-            "determinism_test_paths",
-        )?,
+        determinism_test_paths: optional_string_list(table, "determinism_test_paths")?,
         kernel_paths: required_string_list(table, "kernel_paths")?,
         fixed_wrapper_paths: required_string_list(table, "fixed_wrapper_paths")?,
     })

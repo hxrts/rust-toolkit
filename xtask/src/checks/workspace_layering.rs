@@ -1,4 +1,4 @@
-use std::{collections::BTreeMap, fs, path::Path, process::Command};
+use std::{collections::BTreeMap, path::Path, process::Command};
 
 use anyhow::{bail, Context, Result};
 use serde_json::Value;
@@ -39,10 +39,8 @@ pub fn run(repo_root: &Path, config: &ToolkitConfig) -> Result<FlatFindingSet> {
         .get("workspace_members")
         .and_then(Value::as_array)
         .context("workspace_members missing from cargo metadata")?;
-    let workspace_member_ids: Vec<&str> = workspace_members
-        .iter()
-        .filter_map(Value::as_str)
-        .collect();
+    let workspace_member_ids: Vec<&str> =
+        workspace_members.iter().filter_map(Value::as_str).collect();
     let packages = metadata
         .get("packages")
         .and_then(Value::as_array)
@@ -67,10 +65,10 @@ pub fn run(repo_root: &Path, config: &ToolkitConfig) -> Result<FlatFindingSet> {
         let rel_manifest = package
             .get("manifest_path")
             .and_then(Value::as_str)
-            .and_then(|path| path.strip_prefix(&format!("{}/", repo_root.display())))
-            .map(std::string::ToString::to_string)
+            .map(Path::new)
+            .map(|path| normalize_rel_path(repo_root, path))
             .unwrap_or_else(|| normalize_rel_path(repo_root, &manifest_path));
-        package_names.insert(name.to_owned(), rel_manifest);
+        package_names.insert(name.to_owned(), rel_manifest.clone());
         if !check.crate_layers.contains_key(name) {
             findings.entries.insert(format!(
                 "{rel_manifest}: workspace crate `{name}` is missing from `checks.workspace_layering.crate_layers`"
@@ -95,7 +93,10 @@ pub fn run(repo_root: &Path, config: &ToolkitConfig) -> Result<FlatFindingSet> {
             .cloned()
             .unwrap_or_default();
         for dependency in dependencies {
-            if dependency.get("source").is_some_and(|value| !value.is_null()) {
+            if dependency
+                .get("source")
+                .is_some_and(|value| !value.is_null())
+            {
                 continue;
             }
             if dependency

@@ -30,6 +30,15 @@ manifest_path = "Cargo.toml"
 planned_crates = []
 file_exemptions = []
 
+[checks.docs_prose_quality]
+enabled = true
+include_paths = ["docs"]
+exclude_path_parts = []
+ban_em_dash = true
+ban_semicolon = true
+require_explanatory_prose_after_code = true
+require_prose_exceeds_code = true
+
 [checks.text_formatting]
 enabled = true
 include_paths = ["docs"]
@@ -114,3 +123,27 @@ private_axiom = 0
 unsafe = 0
 partial_def = 0
 empty_theorem_shell = 0
+
+[checks.lean_architecture]
+enabled = true
+include_paths = ["lean"]
+exclude_path_parts = []
+root_facade_files = ["lean/Facade.lean"]
+legacy_projection_exempt_path_parts = ["/Projection/"]
+theorempack_exempt_path_parts = ["/Examples/", "Artifacts.lean"]
+
+[checks.workspace_layering]
+enabled = true
+manifest_path = "Cargo.toml"
+
+[checks.workspace_layering.crate_layers]
+fixture-core = 1
+fixture-traits = 2
+
+[checks.rust_architecture]
+enabled = true
+rust_roots = ["crates"]
+determinism_runtime_paths = ["crates/traits/src/style.rs"]
+determinism_test_paths = []
+kernel_paths = ["crates/traits/src/style.rs"]
+fixed_wrapper_paths = ["crates/traits/src/fixed_q32.rs"]

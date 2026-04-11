@@ -1,8 +1,4 @@
-use std::{
-    collections::BTreeSet,
-    fs,
-    path::Path,
-};
+use std::{collections::BTreeSet, fs, path::Path};
 
 use anyhow::{Context, Result};
 use regex::Regex;
@@ -35,7 +31,9 @@ pub fn run(repo_root: &Path, config: &ToolkitConfig) -> Result<FlatFindingSet> {
     let banned_import_exemptions = banned_import_exemptions(check);
     let mut findings = FlatFindingSet::default();
 
-    for path in collect_lean_files(repo_root, &check.include_paths, &check.exclude_path_parts)? {
+    for path in
+        collect_lean_files(repo_root, &check.include_paths, &check.exclude_path_parts)?
+    {
         let rel = normalize_rel_path(repo_root, &path);
         let source = fs::read_to_string(&path)
             .with_context(|| format!("reading {}", path.display()))?;
@@ -54,9 +52,7 @@ pub fn run(repo_root: &Path, config: &ToolkitConfig) -> Result<FlatFindingSet> {
             if !file_exempt && check.require_problem_statement {
                 if check.enforce_top_of_file_structure {
                     if let Some(reason) = top_of_file_structure_violation(&lines) {
-                        findings.entries.insert(format!(
-                            "{rel}: {reason}"
-                        ));
+                        findings.entries.insert(format!("{rel}: {reason}"));
                     }
                 } else if !has_problem_statement(&lines) {
                     findings.entries.insert(format!(
@@ -159,7 +155,9 @@ pub fn run(repo_root: &Path, config: &ToolkitConfig) -> Result<FlatFindingSet> {
                 continue;
             }
 
-            if check.enforce_target_decl_lines && over_target && !(comment_required && has_marker)
+            if check.enforce_target_decl_lines
+                && over_target
+                && !(comment_required && has_marker)
             {
                 findings.entries.insert(format!(
                     "{rel}: {} `{}` spans {} lines (target limit {}) without justification marker {:?}",
@@ -503,11 +501,7 @@ fn contains_sorry(line: &str) -> bool {
         .is_match(trimmed)
 }
 
-fn has_nearby_todo(
-    lines: &[&str],
-    line_no: usize,
-    markers: &[String],
-) -> bool {
+fn has_nearby_todo(lines: &[&str], line_no: usize, markers: &[String]) -> bool {
     if markers.is_empty() {
         return false;
     }
@@ -597,7 +591,8 @@ over_limit_comment_markers = ["long-block-exception:"]
             findings
                 .entries
                 .iter()
-                .any(|entry| entry.contains("top-of-file structure requires imports first")),
+                .any(|entry| entry
+                    .contains("top-of-file structure requires imports first")),
             "expected problem statement finding, got {findings:?}"
         );
     }
@@ -668,7 +663,10 @@ def longBlock : Nat := by
 
         let config = load(&root.join("toolkit.toml")).expect("load config");
         let findings = run(&root, &config).expect("run check");
-        assert!(findings.entries.is_empty(), "unexpected findings: {findings:?}");
+        assert!(
+            findings.entries.is_empty(),
+            "unexpected findings: {findings:?}"
+        );
     }
 
     #[test]
@@ -795,14 +793,16 @@ theorem foo : True := by
             findings
                 .entries
                 .iter()
-                .any(|entry| entry.contains("top-of-file structure requires imports first")),
+                .any(|entry| entry
+                    .contains("top-of-file structure requires imports first")),
             "expected top-of-file finding, got {findings:?}"
         );
         assert!(
             findings
                 .entries
                 .iter()
-                .any(|entry| entry.contains("missing a preceding `/-- ... -/` docstring")),
+                .any(|entry| entry
+                    .contains("missing a preceding `/-- ... -/` docstring")),
             "expected docstring finding, got {findings:?}"
         );
     }
