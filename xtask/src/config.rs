@@ -20,6 +20,7 @@ pub struct ChecksConfig {
     pub proc_macro_scope: Option<ProcMacroScopeConfig>,
     pub result_must_use: Option<ResultMustUseConfig>,
     pub test_boundaries: Option<TestBoundariesConfig>,
+    pub lean_style: Option<LeanStyleConfig>,
     pub docs_link_check: Option<DocsLinkCheckConfig>,
     pub docs_semantic_drift: Option<DocsSemanticDriftConfig>,
     pub crate_root_policy: Option<CrateRootPolicyConfig>,
@@ -64,6 +65,38 @@ pub struct DocsLinkCheckConfig {
     pub enabled: bool,
     pub docs_roots: Vec<String>,
     pub scratch_dir_prefix: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct LeanStyleConfig {
+    pub enabled: bool,
+    pub include_paths: Vec<String>,
+    pub exclude_path_parts: Vec<String>,
+    pub non_trivial_file_lines: usize,
+    pub section_header_min_lines: usize,
+    pub max_file_lines: usize,
+    pub max_decl_lines_target: usize,
+    pub max_decl_lines_hard_limit: usize,
+    pub enforce_target_decl_lines: bool,
+    pub require_problem_statement: bool,
+    pub require_section_headers: bool,
+    pub require_over_limit_comment: bool,
+    pub over_limit_comment_markers: Vec<String>,
+    pub file_exemptions: Vec<LeanStyleFileExemption>,
+    pub declaration_exemptions: Vec<LeanStyleDeclarationExemption>,
+}
+
+#[derive(Debug, Clone)]
+pub struct LeanStyleFileExemption {
+    pub path: String,
+    pub reason: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct LeanStyleDeclarationExemption {
+    pub path: String,
+    pub name: String,
+    pub reason: String,
 }
 
 #[derive(Debug, Clone)]
@@ -202,6 +235,10 @@ fn parse_checks_config(value: &toml::Value) -> Result<ChecksConfig> {
         .get("test_boundaries")
         .map(parse_test_boundaries_config)
         .transpose()?;
+    let lean_style = table
+        .get("lean_style")
+        .map(parse_lean_style_config)
+        .transpose()?;
     let docs_link_check = table
         .get("docs_link_check")
         .map(parse_docs_link_check_config)
@@ -266,6 +303,7 @@ fn parse_checks_config(value: &toml::Value) -> Result<ChecksConfig> {
             "proc_macro_scope"
                 | "result_must_use"
                 | "test_boundaries"
+                | "lean_style"
                 | "docs_link_check"
                 | "docs_semantic_drift"
                 | "crate_root_policy"
@@ -290,6 +328,7 @@ fn parse_checks_config(value: &toml::Value) -> Result<ChecksConfig> {
         proc_macro_scope,
         result_must_use,
         test_boundaries,
+        lean_style,
         docs_link_check,
         docs_semantic_drift,
         crate_root_policy,
@@ -333,6 +372,73 @@ fn parse_test_boundaries_config(value: &toml::Value) -> Result<TestBoundariesCon
         scan_roots: required_string_list(table, "scan_roots")?,
         exclude_prefixes: optional_string_list(table, "exclude_prefixes")?,
         exclude_path_parts: optional_string_list(table, "exclude_path_parts")?,
+    })
+}
+
+fn parse_lean_style_config(value: &toml::Value) -> Result<LeanStyleConfig> {
+    let table = expect_table(value, "checks.lean_style")?;
+    Ok(LeanStyleConfig {
+        enabled: required_bool(table, "enabled")?,
+        include_paths: required_string_list(table, "include_paths")?,
+        exclude_path_parts: optional_string_list(table, "exclude_path_parts")?,
+        non_trivial_file_lines: required_usize(table, "non_trivial_file_lines")?,
+        section_header_min_lines: required_usize(
+            table,
+            "section_header_min_lines",
+        )?,
+        max_file_lines: required_usize(table, "max_file_lines")?,
+        max_decl_lines_target: required_usize(table, "max_decl_lines_target")?,
+        max_decl_lines_hard_limit: required_usize(
+            table,
+            "max_decl_lines_hard_limit",
+        )?,
+        enforce_target_decl_lines: required_bool(
+            table,
+            "enforce_target_decl_lines",
+        )?,
+        require_problem_statement: required_bool(
+            table,
+            "require_problem_statement",
+        )?,
+        require_section_headers: required_bool(table, "require_section_headers")?,
+        require_over_limit_comment: required_bool(
+            table,
+            "require_over_limit_comment",
+        )?,
+        over_limit_comment_markers: required_string_list(
+            table,
+            "over_limit_comment_markers",
+        )?,
+        file_exemptions: optional_table_array(table, "file_exemptions")?
+            .into_iter()
+            .map(parse_lean_style_file_exemption)
+            .collect::<Result<Vec<_>>>()?,
+        declaration_exemptions: optional_table_array(
+            table,
+            "declaration_exemptions",
+        )?
+        .into_iter()
+        .map(parse_lean_style_declaration_exemption)
+        .collect::<Result<Vec<_>>>()?,
+    })
+}
+
+fn parse_lean_style_file_exemption(
+    table: &toml::map::Map<String, toml::Value>,
+) -> Result<LeanStyleFileExemption> {
+    Ok(LeanStyleFileExemption {
+        path: required_string(table, "path")?,
+        reason: required_string(table, "reason")?,
+    })
+}
+
+fn parse_lean_style_declaration_exemption(
+    table: &toml::map::Map<String, toml::Value>,
+) -> Result<LeanStyleDeclarationExemption> {
+    Ok(LeanStyleDeclarationExemption {
+        path: required_string(table, "path")?,
+        name: required_string(table, "name")?,
+        reason: required_string(table, "reason")?,
     })
 }
 
@@ -511,6 +617,16 @@ fn required_string(
         .ok_or_else(|| anyhow::anyhow!("missing or invalid string `{key}`"))
 }
 
+fn required_usize(
+    table: &toml::map::Map<String, toml::Value>,
+    key: &str,
+) -> Result<usize> {
+    let Some(raw) = table.get(key).and_then(toml::Value::as_integer) else {
+        bail!("missing or invalid integer `{key}`");
+    };
+    usize::try_from(raw).map_err(|_| anyhow::anyhow!("`{key}` must be >= 0"))
+}
+
 fn required_string_list(
     table: &toml::map::Map<String, toml::Value>,
     key: &str,
@@ -529,6 +645,23 @@ fn optional_string_list(
         | Some(value) => string_list(value, key),
         | None => Ok(Vec::new()),
     }
+}
+
+fn optional_table_array<'a>(
+    table: &'a toml::map::Map<String, toml::Value>,
+    key: &str,
+) -> Result<Vec<&'a toml::map::Map<String, toml::Value>>> {
+    let Some(value) = table.get(key) else {
+        return Ok(Vec::new());
+    };
+    let Some(items) = value.as_array() else {
+        bail!("`{key}` must be an array");
+    };
+    let mut out = Vec::with_capacity(items.len());
+    for item in items {
+        out.push(expect_table(item, key)?);
+    }
+    Ok(out)
 }
 
 fn string_list(value: &toml::Value, key: &str) -> Result<Vec<String>> {

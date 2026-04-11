@@ -71,6 +71,9 @@ Inside the toolkit Nix shell, the reusable command surface is:
 - `toolkit-fmt`
   Runs nightly `cargo fmt`, using either `--config <rustfmt.toml>` or the
   toolkit repo's own `rustfmt.toml`.
+- `toolkit-xtask check lean-style`
+  Runs the generic Lean source-style checker over repo-owned `.lean` trees
+  using thresholds and exemptions from `policy/toolkit.toml`.
 - `toolkit-install-dylint`
   Installs `cargo-dylint` and `dylint-link`, then links the pinned nightly
   toolchain name used by toolkit lint runs.
@@ -196,6 +199,7 @@ bootstrap:
 
 ```bash
 ./scripts/toolkit-shell.sh toolkit-xtask check <name> --repo-root . --config policy/toolkit.toml
+./scripts/toolkit-shell.sh toolkit-xtask check lean-style --repo-root . --config policy/toolkit.toml
 ./scripts/toolkit-shell.sh toolkit-install-dylint
 ./scripts/toolkit-shell.sh toolkit-dylint --repo-root . --toolkit-lint trait_purity --all -- --all-targets
 ./scripts/toolkit-shell.sh toolkit-dylint --repo-root . --lint-path ./policy/lints/model_policy --all -- --all-targets
@@ -208,6 +212,16 @@ can still run its own policy runner directly:
 ```bash
 cargo run --manifest-path policy/xtask/Cargo.toml -- check <name>
 ```
+
+For Lean-heavy repos, the recommended local flow is usually:
+
+```bash
+./scripts/toolkit-shell.sh toolkit-xtask check lean-style --repo-root . --config policy/toolkit.toml
+cd verification && lake build
+```
+
+Most consumers should wrap those two commands in a repo-local `just lean-check`
+entrypoint rather than trying to intercept raw `lake build`.
 
 ## Minimal Adoption Checklist
 

@@ -6,6 +6,7 @@ pub mod docs_link_check;
 pub mod docs_semantic_drift;
 pub mod drop_side_effects;
 pub mod ignored_result;
+pub mod lean_style;
 pub mod limit_constant;
 pub mod must_use_public_return;
 pub mod naming_units;

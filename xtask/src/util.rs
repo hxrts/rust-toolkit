@@ -87,6 +87,44 @@ pub fn collect_markdown_files(
     Ok(files)
 }
 
+pub fn collect_lean_files(
+    root: &Path,
+    include_roots: &[String],
+    exclude_path_parts: &[String],
+) -> Result<Vec<PathBuf>> {
+    let mut files = Vec::new();
+    for rel in include_roots {
+        let dir = root.join(rel);
+        if !dir.exists() {
+            continue;
+        }
+        for entry in walkdir::WalkDir::new(&dir)
+            .into_iter()
+            .filter_map(std::result::Result::ok)
+            .filter(|entry| entry.file_type().is_file())
+        {
+            let path = entry.path();
+            if path.extension().and_then(|ext| ext.to_str()) != Some("lean") {
+                continue;
+            }
+            let rel_path = normalize_rel_path(root, path);
+            if rel_path.contains("/.lake/")
+                || rel_path.contains("/build/")
+                || rel_path.contains("/lake-packages/")
+                || exclude_path_parts
+                    .iter()
+                    .any(|part| !part.is_empty() && rel_path.contains(part))
+            {
+                continue;
+            }
+            files.push(path.to_path_buf());
+        }
+    }
+    files.sort();
+    files.dedup();
+    Ok(files)
+}
+
 pub fn just_recipes(root: &Path) -> Result<BTreeSet<String>> {
     let output = Command::new("just")
         .arg("--summary")

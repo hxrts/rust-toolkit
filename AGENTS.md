@@ -13,6 +13,7 @@ The toolkit owns portable enforcement machinery:
 - fixture-backed validation
 - shared config parsing and source discovery
 - formatter, clippy, and dylint shell support
+- generic Lean source-style checks over `.lean` files
 - the toolkit command surface exposed from `flake.nix`
 
 A consuming repository owns:

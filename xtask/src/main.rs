@@ -125,6 +125,11 @@ fn run_check(args: &[String]) -> Result<()> {
             print_flat_findings(name.as_str(), &findings);
             return if findings.is_empty() { Ok(()) } else { bail!("{name} failed") };
         },
+        | "lean-style" => {
+            let findings = checks::lean_style::run(&repo_root, &config)?;
+            print_flat_findings(name.as_str(), &findings);
+            return if findings.is_empty() { Ok(()) } else { bail!("{name} failed") };
+        },
         | "docs-link-check" => {
             let findings = checks::docs_link_check::run(&repo_root, &config)?;
             print_flat_findings(name.as_str(), &findings);
