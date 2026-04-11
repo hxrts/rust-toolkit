@@ -373,6 +373,7 @@ EOF
           buildInputs = consumerShellSupport.buildInputs;
 
           shellHook = ''
+            [[ -r "$HOME/.local/state/secrets/cargo-registry-token" ]] && export CARGO_REGISTRY_TOKEN="$(cat "$HOME/.local/state/secrets/cargo-registry-token")"
             export PATH="$HOME/.cargo/bin:$PATH"
             ${consumerShellSupport.shellHook}
             if [ -f "$PWD/flake.nix" ] && [ -d "$PWD/xtask" ] && [ -d "$PWD/lints" ]; then

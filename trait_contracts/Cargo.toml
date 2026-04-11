@@ -5,10 +5,12 @@ name = "rust-toolkit-trait-contracts"
 version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"
-publish = false
+authors = ["Sam Hart"]
+description = "Trait contract proc-macro helpers for the hxrts toolkit"
+homepage = "https://github.com/hxrts/toolkit"
+repository = "https://github.com/hxrts/toolkit"
 
 [dependencies]
 proc-macro2 = "1"
 quote = "1"
 syn = { version = "2", features = ["full"] }
-

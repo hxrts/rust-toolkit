@@ -5,5 +5,7 @@ name = "rust-toolkit-effects"
 version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"
-publish = false
-
+authors = ["Sam Hart"]
+description = "Effect vocabulary marker traits for the hxrts toolkit"
+homepage = "https://github.com/hxrts/toolkit"
+repository = "https://github.com/hxrts/toolkit"
