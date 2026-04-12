@@ -339,6 +339,7 @@ EOF
             else
               export TOOLKIT_ROOT="${self.outPath}"
             fi
+            [[ -r "$HOME/.local/state/secrets/cargo-registry-token" ]] && export CARGO_REGISTRY_TOKEN="$(cat "$HOME/.local/state/secrets/cargo-registry-token")"
             echo "Toolkit nightly environment"
             echo "Rust: $(${rustToolchainNightly}/bin/rustc --version)"
             echo "Run 'toolkit-install-dylint' once in this shell if cargo-dylint is not installed."
