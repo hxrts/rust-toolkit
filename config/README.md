@@ -2,7 +2,7 @@
 
 Toolkit checks are configured by the consuming repository.
 
-The intended local config file is `policy/toolkit.toml`.
+The intended local config file is `toolkit/toolkit.toml`.
 
 At minimum, the config should define:
 

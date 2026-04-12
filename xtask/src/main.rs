@@ -8,7 +8,7 @@ use anyhow::{bail, Result};
 use jacquard_toolkit_xtask::{checks, config, legacy, report};
 use report::FindingSet;
 
-const DEFAULT_CONFIG: &str = "policy/toolkit.toml";
+const DEFAULT_CONFIG: &str = "toolkit/toolkit.toml";
 
 fn toolkit_root() -> Result<PathBuf> {
     if let Some(root) = env::var_os("TOOLKIT_ROOT") {
@@ -140,8 +140,38 @@ fn run_check(args: &[String]) -> Result<()> {
             print_flat_findings(name.as_str(), &findings);
             return if findings.is_empty() { Ok(()) } else { bail!("{name} failed") };
         },
+        | "docs-index" => {
+            let findings = checks::docs_index::run(&repo_root, &config)?;
+            print_flat_findings(name.as_str(), &findings);
+            return if findings.is_empty() { Ok(()) } else { bail!("{name} failed") };
+        },
         | "docs-semantic-drift" => {
             let findings = checks::docs_semantic_drift::run(&repo_root, &config)?;
+            print_flat_findings(name.as_str(), &findings);
+            return if findings.is_empty() { Ok(()) } else { bail!("{name} failed") };
+        },
+        | "formal-claim-scope" => {
+            let findings = checks::formal_claim_scope::run(&repo_root, &config)?;
+            print_flat_findings(name.as_str(), &findings);
+            return if findings.is_empty() { Ok(()) } else { bail!("{name} failed") };
+        },
+        | "parity-ledger" => {
+            let findings = checks::parity_ledger::run(&repo_root, &config)?;
+            print_flat_findings(name.as_str(), &findings);
+            return if findings.is_empty() { Ok(()) } else { bail!("{name} failed") };
+        },
+        | "durable-boundaries" => {
+            let findings = checks::durable_boundaries::run(&repo_root, &config)?;
+            print_flat_findings(name.as_str(), &findings);
+            return if findings.is_empty() { Ok(()) } else { bail!("{name} failed") };
+        },
+        | "search-boundaries" => {
+            let findings = checks::search_boundaries::run(&repo_root, &config)?;
+            print_flat_findings(name.as_str(), &findings);
+            return if findings.is_empty() { Ok(()) } else { bail!("{name} failed") };
+        },
+        | "viewer-tooling-boundaries" => {
+            let findings = checks::viewer_tooling_boundaries::run(&repo_root, &config)?;
             print_flat_findings(name.as_str(), &findings);
             return if findings.is_empty() { Ok(()) } else { bail!("{name} failed") };
         },
@@ -228,8 +258,14 @@ fn show_config(args: &[String]) -> Result<()> {
         println!("bundles.rust_base.enabled = {}", bundle.enabled);
         println!("bundles.rust_base.rust_roots = {:?}", bundle.rust_roots);
         println!("bundles.rust_base.docs_roots = {:?}", bundle.docs_roots);
-        println!("bundles.rust_base.manifest_path = {:?}", bundle.manifest_path);
-        println!("bundles.rust_base.workflow_roots = {:?}", bundle.workflow_roots);
+        println!(
+            "bundles.rust_base.manifest_path = {:?}",
+            bundle.manifest_path
+        );
+        println!(
+            "bundles.rust_base.workflow_roots = {:?}",
+            bundle.workflow_roots
+        );
     }
     println!(
         "extra_check_keys = {:?}",

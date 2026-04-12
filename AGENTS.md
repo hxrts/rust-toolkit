@@ -19,13 +19,13 @@ The toolkit owns portable enforcement machinery:
 
 A consuming repository owns:
 
-- `policy/toolkit.toml`
+- `toolkit/toolkit.toml`
 - domain-specific checks
 - domain-specific lint crates
 - repo-specific exemptions
 - local `just`, CI, and hook entrypoints
 - the local flake wiring that adds toolkit packages to the repo shell
-- any direct `cargo run --manifest-path policy/xtask/Cargo.toml -- ...` usage
+- any direct `cargo run --manifest-path toolkit/xtask/Cargo.toml -- ...` usage
 
 If a proposed rule needs to name repo-specific concepts, crate topology, or
 domain language, it does not belong here.
@@ -41,7 +41,7 @@ Keep the split explicit:
 - Lean declaration-semantic linting that depends on one repository's proof
   architecture does not belong here.
 - Repo-specific architecture rules still belong in the consuming repo's
-  `policy/` directory, whether the repo is Rust-heavy, Lean-heavy, or mixed.
+  `toolkit/` directory, whether the repo is Rust-heavy, Lean-heavy, or mixed.
 
 The toolkit should not blur these surfaces. Keep Rust policy docs, Lean policy
 docs, config keys, and examples visibly separated so consuming repos can adopt
@@ -67,7 +67,7 @@ only the pieces they need.
   subtle or easy to regress.
 - Keep docs in `docs/` and keep the root `README.md` short.
 - Do not add consuming-repo policy examples that imply this repo owns a local
-  `policy/` directory.
+  `toolkit/` directory.
 
 ## Commands
 
@@ -75,12 +75,12 @@ Run commands from the toolkit repo root.
 
 ```bash
 nix develop --command toolkit-install-dylint
-nix develop --command toolkit-xtask show-config --repo-root <repo> --config <repo>/policy/toolkit.toml
-nix develop --command toolkit-xtask check <name> --repo-root <repo> --config <repo>/policy/toolkit.toml
-nix develop --command toolkit-xtask parity <name> --repo-root <repo> --config <repo>/policy/toolkit.toml
+nix develop --command toolkit-xtask show-config --repo-root <repo> --config <repo>/toolkit/toolkit.toml
+nix develop --command toolkit-xtask check <name> --repo-root <repo> --config <repo>/toolkit/toolkit.toml
+nix develop --command toolkit-xtask parity <name> --repo-root <repo> --config <repo>/toolkit/toolkit.toml
 nix develop --command toolkit-fmt --config ./rustfmt.toml --all -- --check
 nix develop --command toolkit-dylint --repo-root <repo> --toolkit-lint trait_purity --all -- --all-targets
-nix develop --command toolkit-dylint --repo-root <repo> --lint-path <repo>/policy/lints/<lint> --all -- --all-targets
+nix develop --command toolkit-dylint --repo-root <repo> --lint-path <repo>/toolkit/lints/<lint> --all -- --all-targets
 ```
 
 The toolkit shell commands rely on `TOOLKIT_ROOT` when they need to find the
@@ -95,7 +95,7 @@ Use this decision rule:
 1. If the rule is generic and only its scope varies by repo, add config support.
 2. If the rule semantics are reusable across repos, implement it here.
 3. If the rule depends on one repo's architecture language, leave it in that
-   repo's `policy/`.
+   repo's `toolkit/`.
 
 When adding a generic rule:
 
