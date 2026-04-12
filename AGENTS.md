@@ -65,7 +65,16 @@ only the pieces they need.
   consumer-specific scripts.
 - Add fixture coverage under `fixtures/` and `xtask/tests/` when behavior is
   subtle or easy to regress.
-- Keep docs in `docs/` and keep the root `README.md` short.
+- Keep docs in `docs/` and keep the root `README.md` short. The three files in
+  `docs/` are:
+  - `docs/toolkit_repo.md` — layout, directory roles, command ownership, and
+    design constraints for contributors working inside this repo.
+  - `docs/consuming_repos.md` — ownership split, recommended layout, flake
+    wiring, bootstrap script, rule placement, and adoption checklist for
+    repos that consume the toolkit as a flake input.
+  - `docs/toolkit-shell.sh` — copyable bootstrap wrapper script that consuming
+    repos place at `scripts/toolkit-shell.sh`; handles nix shell entry,
+    `TOOLKIT_ROOT` wiring, and rustup shim removal.
 - Do not add consuming-repo policy examples that imply this repo owns a local
   `toolkit/` directory.
 
