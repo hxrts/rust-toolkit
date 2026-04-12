@@ -3,7 +3,7 @@
 
 [package]
 name = "jacquard-naked-map-err"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 publish = false
 description = "Dylint check: .map_err(|_| RouteError::Runtime(...)) with discarded error must use ResultExt methods"
