@@ -20,8 +20,7 @@ pub fn run(repo_root: &Path, config: &ToolkitConfig) -> Result<FlatFindingSet> {
         return Ok(FlatFindingSet::default());
     }
 
-    let unsafe_re =
-        Regex::new(r"\bunsafe(?:\s+fn|\s+trait|\s+impl|\s+extern|\s*\{)")?;
+    let unsafe_re = Regex::new(r"\bunsafe(?:\s+fn|\s+trait|\s+impl|\s+extern|\s*\{)")?;
     let mut findings = FlatFindingSet::default();
     for path in collect_rust_policy_files(
         repo_root,

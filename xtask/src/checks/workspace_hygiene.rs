@@ -2,10 +2,7 @@ use std::path::Path;
 
 use anyhow::Result;
 
-use crate::{
-    config::ToolkitConfig,
-    report::FlatFindingSet,
-};
+use crate::{config::ToolkitConfig, report::FlatFindingSet};
 
 pub fn run(repo_root: &Path, config: &ToolkitConfig) -> Result<FlatFindingSet> {
     let Some(check) = &config.checks.workspace_hygiene else {
@@ -38,10 +35,12 @@ pub fn run(repo_root: &Path, config: &ToolkitConfig) -> Result<FlatFindingSet> {
                     "{rel_path}: lonely mod.rs file should be collapsed into a sibling Rust file"
                 ));
             }
-            if entry.file_type().is_dir() && is_empty_directory(path, &check.exclude_path_parts) {
-                findings
-                    .entries
-                    .insert(format!("{rel_path}: empty directory should be removed or populated"));
+            if entry.file_type().is_dir()
+                && is_empty_directory(path, &check.exclude_path_parts)
+            {
+                findings.entries.insert(format!(
+                    "{rel_path}: empty directory should be removed or populated"
+                ));
             }
         }
     }

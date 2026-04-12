@@ -23,12 +23,68 @@ enabled = true
 docs_roots = ["docs"]
 scratch_dir_prefix = "work/"
 
+[checks.docs_index]
+enabled = true
+docs_root = "docs"
+index_file = "docs/101_introduction.md"
+heading = "## Document Index"
+exclude_files = ["101_introduction.md", "SUMMARY.md"]
+
 [checks.docs_semantic_drift]
 enabled = true
 docs_roots = ["docs"]
 manifest_path = "Cargo.toml"
 planned_crates = []
 file_exemptions = []
+
+[checks.formal_claim_scope]
+enabled = true
+
+[[checks.formal_claim_scope.files]]
+path = "docs/claim.md"
+required_literals = ["Current formal claim", "Claimed surface"]
+forbidden_literals = ["end to end"]
+
+[checks.parity_ledger]
+enabled = true
+
+[[checks.parity_ledger.files]]
+path = "docs/parity.md"
+required_literals = ["### Deviation Registry", "| ID | Status | Owner | Revisit | Summary |"]
+forbidden_literals = []
+
+[checks.durable_boundaries]
+enabled = true
+
+[[checks.durable_boundaries.required_patterns]]
+pattern = "typed durable artifacts"
+include_paths = ["docs/durable.md"]
+
+[[checks.durable_boundaries.forbidden_patterns]]
+pattern = "PersistedDurabilityArtifact"
+include_paths = ["crates/viewer/src"]
+
+[checks.search_boundaries]
+enabled = true
+
+[[checks.search_boundaries.required_patterns]]
+pattern = "generic"
+include_paths = ["docs/search.md"]
+
+[[checks.search_boundaries.forbidden_patterns]]
+pattern = "dioxus"
+include_paths = ["crates/search/src"]
+
+[checks.viewer_tooling_boundaries]
+enabled = true
+
+[[checks.viewer_tooling_boundaries.required_patterns]]
+pattern = "telltale-viewer"
+include_paths = ["docs/viewer.md"]
+
+[[checks.viewer_tooling_boundaries.forbidden_patterns]]
+pattern = "web_sys|js_sys|wasm_bindgen"
+include_paths = ["crates/viewer/src"]
 
 [checks.text_formatting]
 enabled = true

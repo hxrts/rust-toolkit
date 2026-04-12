@@ -38,7 +38,13 @@ pub struct ChecksConfig {
     pub lean_style: Option<LeanStyleConfig>,
     pub lean_escape_hatches: Option<LeanEscapeHatchesConfig>,
     pub docs_link_check: Option<DocsLinkCheckConfig>,
+    pub docs_index: Option<DocsIndexConfig>,
     pub docs_semantic_drift: Option<DocsSemanticDriftConfig>,
+    pub formal_claim_scope: Option<FileLiteralContractsConfig>,
+    pub parity_ledger: Option<FileLiteralContractsConfig>,
+    pub durable_boundaries: Option<ScopedPatternContractsConfig>,
+    pub search_boundaries: Option<ScopedPatternContractsConfig>,
+    pub viewer_tooling_boundaries: Option<ScopedPatternContractsConfig>,
     pub workflow_actions: Option<WorkflowActionsConfig>,
     pub text_formatting: Option<TextFormattingConfig>,
     pub workspace_hygiene: Option<WorkspaceHygieneConfig>,
@@ -84,6 +90,15 @@ pub struct DocsLinkCheckConfig {
     pub enabled: bool,
     pub docs_roots: Vec<String>,
     pub scratch_dir_prefix: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct DocsIndexConfig {
+    pub enabled: bool,
+    pub docs_root: String,
+    pub index_file: String,
+    pub heading: String,
+    pub exclude_files: Vec<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -149,6 +164,32 @@ pub struct DocsSemanticDriftConfig {
     pub manifest_path: String,
     pub planned_crates: Vec<String>,
     pub file_exemptions: Vec<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct FileLiteralContractsConfig {
+    pub enabled: bool,
+    pub files: Vec<FileLiteralContract>,
+}
+
+#[derive(Debug, Clone)]
+pub struct FileLiteralContract {
+    pub path: String,
+    pub required_literals: Vec<String>,
+    pub forbidden_literals: Vec<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ScopedPatternContractsConfig {
+    pub enabled: bool,
+    pub required_patterns: Vec<ScopedPatternContract>,
+    pub forbidden_patterns: Vec<ScopedPatternContract>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ScopedPatternContract {
+    pub pattern: String,
+    pub include_paths: Vec<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -324,9 +365,33 @@ fn parse_checks_config(value: &toml::Value) -> Result<ChecksConfig> {
         .get("docs_link_check")
         .map(parse_docs_link_check_config)
         .transpose()?;
+    let docs_index = table
+        .get("docs_index")
+        .map(parse_docs_index_config)
+        .transpose()?;
     let docs_semantic_drift = table
         .get("docs_semantic_drift")
         .map(parse_docs_semantic_drift_config)
+        .transpose()?;
+    let formal_claim_scope = table
+        .get("formal_claim_scope")
+        .map(parse_file_literal_contracts_config)
+        .transpose()?;
+    let parity_ledger = table
+        .get("parity_ledger")
+        .map(parse_file_literal_contracts_config)
+        .transpose()?;
+    let durable_boundaries = table
+        .get("durable_boundaries")
+        .map(parse_scoped_pattern_contracts_config)
+        .transpose()?;
+    let search_boundaries = table
+        .get("search_boundaries")
+        .map(parse_scoped_pattern_contracts_config)
+        .transpose()?;
+    let viewer_tooling_boundaries = table
+        .get("viewer_tooling_boundaries")
+        .map(parse_scoped_pattern_contracts_config)
         .transpose()?;
     let workflow_actions = table
         .get("workflow_actions")
@@ -399,7 +464,13 @@ fn parse_checks_config(value: &toml::Value) -> Result<ChecksConfig> {
                 | "lean_style"
                 | "lean_escape_hatches"
                 | "docs_link_check"
+                | "docs_index"
                 | "docs_semantic_drift"
+                | "formal_claim_scope"
+                | "parity_ledger"
+                | "durable_boundaries"
+                | "search_boundaries"
+                | "viewer_tooling_boundaries"
                 | "workflow_actions"
                 | "text_formatting"
                 | "workspace_hygiene"
@@ -428,7 +499,13 @@ fn parse_checks_config(value: &toml::Value) -> Result<ChecksConfig> {
         lean_style,
         lean_escape_hatches,
         docs_link_check,
+        docs_index,
         docs_semantic_drift,
+        formal_claim_scope,
+        parity_ledger,
+        durable_boundaries,
+        search_boundaries,
+        viewer_tooling_boundaries,
         workflow_actions,
         text_formatting,
         workspace_hygiene,
@@ -483,33 +560,18 @@ fn parse_lean_style_config(value: &toml::Value) -> Result<LeanStyleConfig> {
         include_paths: required_string_list(table, "include_paths")?,
         exclude_path_parts: optional_string_list(table, "exclude_path_parts")?,
         non_trivial_file_lines: required_usize(table, "non_trivial_file_lines")?,
-        section_header_min_lines: required_usize(
-            table,
-            "section_header_min_lines",
-        )?,
+        section_header_min_lines: required_usize(table, "section_header_min_lines")?,
         max_file_lines: required_usize(table, "max_file_lines")?,
         max_decl_lines_target: required_usize(table, "max_decl_lines_target")?,
-        max_decl_lines_hard_limit: required_usize(
-            table,
-            "max_decl_lines_hard_limit",
-        )?,
-        enforce_target_decl_lines: required_bool(
-            table,
-            "enforce_target_decl_lines",
-        )?,
-        require_problem_statement: required_bool(
-            table,
-            "require_problem_statement",
-        )?,
+        max_decl_lines_hard_limit: required_usize(table, "max_decl_lines_hard_limit")?,
+        enforce_target_decl_lines: required_bool(table, "enforce_target_decl_lines")?,
+        require_problem_statement: required_bool(table, "require_problem_statement")?,
         enforce_top_of_file_structure: required_bool(
             table,
             "enforce_top_of_file_structure",
         )?,
         require_section_headers: required_bool(table, "require_section_headers")?,
-        require_over_limit_comment: required_bool(
-            table,
-            "require_over_limit_comment",
-        )?,
+        require_over_limit_comment: required_bool(table, "require_over_limit_comment")?,
         require_explanatory_comment_for_long_blocks: required_bool(
             table,
             "require_explanatory_comment_for_long_blocks",
@@ -534,13 +596,10 @@ fn parse_lean_style_config(value: &toml::Value) -> Result<LeanStyleConfig> {
             .into_iter()
             .map(parse_lean_style_file_exemption)
             .collect::<Result<Vec<_>>>()?,
-        declaration_exemptions: optional_table_array(
-            table,
-            "declaration_exemptions",
-        )?
-        .into_iter()
-        .map(parse_lean_style_declaration_exemption)
-        .collect::<Result<Vec<_>>>()?,
+        declaration_exemptions: optional_table_array(table, "declaration_exemptions")?
+            .into_iter()
+            .map(parse_lean_style_declaration_exemption)
+            .collect::<Result<Vec<_>>>()?,
     })
 }
 
@@ -598,6 +657,17 @@ fn parse_docs_link_check_config(value: &toml::Value) -> Result<DocsLinkCheckConf
     })
 }
 
+fn parse_docs_index_config(value: &toml::Value) -> Result<DocsIndexConfig> {
+    let table = expect_table(value, "checks.docs_index")?;
+    Ok(DocsIndexConfig {
+        enabled: required_bool(table, "enabled")?,
+        docs_root: required_string(table, "docs_root")?,
+        index_file: required_string(table, "index_file")?,
+        heading: required_string(table, "heading")?,
+        exclude_files: optional_string_list(table, "exclude_files")?,
+    })
+}
+
 fn parse_docs_semantic_drift_config(
     value: &toml::Value,
 ) -> Result<DocsSemanticDriftConfig> {
@@ -611,9 +681,56 @@ fn parse_docs_semantic_drift_config(
     })
 }
 
-fn parse_text_formatting_config(
+fn parse_file_literal_contracts_config(
     value: &toml::Value,
-) -> Result<TextFormattingConfig> {
+) -> Result<FileLiteralContractsConfig> {
+    let table = expect_table(value, "checks.file_literal_contracts")?;
+    Ok(FileLiteralContractsConfig {
+        enabled: required_bool(table, "enabled")?,
+        files: optional_table_array(table, "files")?
+            .into_iter()
+            .map(parse_file_literal_contract)
+            .collect::<Result<Vec<_>>>()?,
+    })
+}
+
+fn parse_file_literal_contract(
+    table: &toml::map::Map<String, toml::Value>,
+) -> Result<FileLiteralContract> {
+    Ok(FileLiteralContract {
+        path: required_string(table, "path")?,
+        required_literals: optional_string_list(table, "required_literals")?,
+        forbidden_literals: optional_string_list(table, "forbidden_literals")?,
+    })
+}
+
+fn parse_scoped_pattern_contracts_config(
+    value: &toml::Value,
+) -> Result<ScopedPatternContractsConfig> {
+    let table = expect_table(value, "checks.scoped_pattern_contracts")?;
+    Ok(ScopedPatternContractsConfig {
+        enabled: required_bool(table, "enabled")?,
+        required_patterns: optional_table_array(table, "required_patterns")?
+            .into_iter()
+            .map(parse_scoped_pattern_contract)
+            .collect::<Result<Vec<_>>>()?,
+        forbidden_patterns: optional_table_array(table, "forbidden_patterns")?
+            .into_iter()
+            .map(parse_scoped_pattern_contract)
+            .collect::<Result<Vec<_>>>()?,
+    })
+}
+
+fn parse_scoped_pattern_contract(
+    table: &toml::map::Map<String, toml::Value>,
+) -> Result<ScopedPatternContract> {
+    Ok(ScopedPatternContract {
+        pattern: required_string(table, "pattern")?,
+        include_paths: required_string_list(table, "include_paths")?,
+    })
+}
+
+fn parse_text_formatting_config(value: &toml::Value) -> Result<TextFormattingConfig> {
     let table = expect_table(value, "checks.text_formatting")?;
     Ok(TextFormattingConfig {
         enabled: required_bool(table, "enabled")?,

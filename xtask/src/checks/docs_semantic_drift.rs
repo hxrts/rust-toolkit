@@ -279,10 +279,12 @@ fn check_snippet(
 }
 
 fn looks_like_path(snippet: &str) -> bool {
-    matches!(snippet, "AGENTS.md" | "CLAUDE.md" | "Cargo.toml" | "justfile")
-        || ["docs/", "crates/", "scripts/", "lints/", "nix/", ".github/", "toolkit/"]
-            .iter()
-            .any(|prefix| snippet.starts_with(prefix))
+    matches!(
+        snippet,
+        "AGENTS.md" | "CLAUDE.md" | "Cargo.toml" | "justfile"
+    ) || ["docs/", "crates/", "scripts/", "lints/", "nix/", ".github/", "toolkit/"]
+        .iter()
+        .any(|prefix| snippet.starts_with(prefix))
         || snippet.ends_with(".md")
         || snippet.ends_with(".rs")
         || snippet.ends_with(".sh")

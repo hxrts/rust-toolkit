@@ -39,12 +39,53 @@ fn fail_fixture_reports_expected_findings() {
         .iter()
         .any(|entry| entry.contains("missing docs link")));
 
+    let docs_index = checks::docs_index::run(&repo_root, &cfg).unwrap();
+    assert!(docs_index
+        .entries
+        .iter()
+        .any(|entry| entry.contains("does not match H1 title")));
+
     let semantic = checks::docs_semantic_drift::run(&repo_root, &cfg).unwrap();
     assert!(semantic
         .entries
         .iter()
         .any(|entry| entry.contains("unresolved path")
             || entry.contains("unresolved symbol")));
+
+    let formal_claim = checks::formal_claim_scope::run(&repo_root, &cfg).unwrap();
+    assert!(formal_claim
+        .entries
+        .iter()
+        .any(|entry| entry.contains("missing required text")
+            || entry.contains("forbidden text present")));
+
+    let parity_ledger = checks::parity_ledger::run(&repo_root, &cfg).unwrap();
+    assert!(parity_ledger
+        .entries
+        .iter()
+        .any(|entry| entry.contains("Deviation Registry")
+            || entry.contains("| ID | Status | Owner | Revisit | Summary |")));
+
+    let durable = checks::durable_boundaries::run(&repo_root, &cfg).unwrap();
+    assert!(durable
+        .entries
+        .iter()
+        .any(|entry| entry.contains("PersistedDurabilityArtifact")
+            || entry.contains("typed durable artifacts")));
+
+    let search = checks::search_boundaries::run(&repo_root, &cfg).unwrap();
+    assert!(search
+        .entries
+        .iter()
+        .any(|entry| entry.contains("dioxus")
+            || entry.contains("missing required pattern")));
+
+    let viewer = checks::viewer_tooling_boundaries::run(&repo_root, &cfg).unwrap();
+    assert!(viewer
+        .entries
+        .iter()
+        .any(|entry| entry.contains("web_sys")
+            || entry.contains("missing required pattern")));
 
     let workflows = checks::workflow_actions::run(&repo_root, &cfg).unwrap();
     assert!(workflows
@@ -160,7 +201,25 @@ fn pass_fixture_reports_no_findings() {
     assert!(checks::docs_link_check::run(&repo_root, &cfg)
         .unwrap()
         .is_empty());
+    assert!(checks::docs_index::run(&repo_root, &cfg)
+        .unwrap()
+        .is_empty());
     assert!(checks::docs_semantic_drift::run(&repo_root, &cfg)
+        .unwrap()
+        .is_empty());
+    assert!(checks::formal_claim_scope::run(&repo_root, &cfg)
+        .unwrap()
+        .is_empty());
+    assert!(checks::parity_ledger::run(&repo_root, &cfg)
+        .unwrap()
+        .is_empty());
+    assert!(checks::durable_boundaries::run(&repo_root, &cfg)
+        .unwrap()
+        .is_empty());
+    assert!(checks::search_boundaries::run(&repo_root, &cfg)
+        .unwrap()
+        .is_empty());
+    assert!(checks::viewer_tooling_boundaries::run(&repo_root, &cfg)
         .unwrap()
         .is_empty());
     assert!(checks::workflow_actions::run(&repo_root, &cfg)

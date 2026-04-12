@@ -32,7 +32,9 @@ pub fn run(repo_root: &Path, config: &ToolkitConfig) -> Result<FlatFindingSet> {
     let exemptions = exemption_map(check);
     let mut by_kind: BTreeMap<String, Vec<String>> = BTreeMap::new();
 
-    for path in collect_lean_files(repo_root, &check.include_paths, &check.exclude_path_parts)? {
+    for path in
+        collect_lean_files(repo_root, &check.include_paths, &check.exclude_path_parts)?
+    {
         scan_file(
             repo_root,
             &path,
@@ -98,7 +100,10 @@ fn scan_file(
             if is_exempt(exempt_kinds, "empty_theorem_shell") {
                 continue;
             }
-            let line_no = source[..capture.start()].bytes().filter(|byte| *byte == b'\n').count()
+            let line_no = source[..capture.start()]
+                .bytes()
+                .filter(|byte| *byte == b'\n')
+                .count()
                 + 1;
             if !seen_shell_lines.insert(line_no) {
                 continue;

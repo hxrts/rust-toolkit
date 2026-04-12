@@ -2,10 +2,8 @@ use std::{collections::BTreeSet, fs, path::Path};
 
 use anyhow::{Context, Result};
 use syn::{
-    spanned::Spanned,
-    visit::Visit,
-    Field, Fields, ImplItem, ImplItemFn, ItemEnum, ItemFn, ItemImpl, ItemStruct, ReturnType, Type,
-    Visibility,
+    spanned::Spanned, visit::Visit, Field, Fields, ImplItem, ImplItemFn, ItemEnum,
+    ItemFn, ItemImpl, ItemStruct, ReturnType, Type, Visibility,
 };
 
 use crate::{
@@ -128,17 +126,17 @@ impl<'ast> Visit<'ast> for PublicTypeWidthVisitor<'_> {
             return;
         }
         match &item_struct.fields {
-            Fields::Named(fields) => {
+            | Fields::Named(fields) => {
                 for field in &fields.named {
                     self.inspect_public_field(field);
                 }
-            }
-            Fields::Unnamed(fields) => {
+            },
+            | Fields::Unnamed(fields) => {
                 for field in &fields.unnamed {
                     self.inspect_public_field(field);
                 }
-            }
-            Fields::Unit => {}
+            },
+            | Fields::Unit => {},
         }
     }
 
@@ -164,17 +162,17 @@ fn collect_banned_types(
     out: &mut BTreeSet<String>,
 ) {
     match ty {
-        Type::Array(array) => collect_banned_types(&array.elem, banned_types, out),
-        Type::BareFn(bare_fn) => {
+        | Type::Array(array) => collect_banned_types(&array.elem, banned_types, out),
+        | Type::BareFn(bare_fn) => {
             for input in &bare_fn.inputs {
                 collect_banned_types(&input.ty, banned_types, out);
             }
             if let ReturnType::Type(_, ty) = &bare_fn.output {
                 collect_banned_types(ty, banned_types, out);
             }
-        }
-        Type::Group(group) => collect_banned_types(&group.elem, banned_types, out),
-        Type::ImplTrait(impl_trait) => {
+        },
+        | Type::Group(group) => collect_banned_types(&group.elem, banned_types, out),
+        | Type::ImplTrait(impl_trait) => {
             for bound in &impl_trait.bounds {
                 if let syn::TypeParamBound::Trait(bound) = bound {
                     if let Some(segment) = bound.path.segments.last() {
@@ -185,9 +183,9 @@ fn collect_banned_types(
                     }
                 }
             }
-        }
-        Type::Paren(paren) => collect_banned_types(&paren.elem, banned_types, out),
-        Type::Path(type_path) => {
+        },
+        | Type::Paren(paren) => collect_banned_types(&paren.elem, banned_types, out),
+        | Type::Path(type_path) => {
             for segment in &type_path.path.segments {
                 let ident = segment.ident.to_string();
                 if banned_types.contains(&ident) {
@@ -201,15 +199,17 @@ fn collect_banned_types(
                     }
                 }
             }
-        }
-        Type::Ptr(ptr) => collect_banned_types(&ptr.elem, banned_types, out),
-        Type::Reference(reference) => collect_banned_types(&reference.elem, banned_types, out),
-        Type::Slice(slice) => collect_banned_types(&slice.elem, banned_types, out),
-        Type::Tuple(tuple) => {
+        },
+        | Type::Ptr(ptr) => collect_banned_types(&ptr.elem, banned_types, out),
+        | Type::Reference(reference) => {
+            collect_banned_types(&reference.elem, banned_types, out)
+        },
+        | Type::Slice(slice) => collect_banned_types(&slice.elem, banned_types, out),
+        | Type::Tuple(tuple) => {
             for elem in &tuple.elems {
                 collect_banned_types(elem, banned_types, out);
             }
-        }
-        _ => {}
+        },
+        | _ => {},
     }
 }
