@@ -105,6 +105,14 @@ Inside the toolkit Nix shell, the reusable command surface is:
   Enforces repo-owned generic search crate boundary content and forbidden leakage patterns.
 - `toolkit-xtask check viewer_tooling_boundaries`
   Enforces repo-owned viewer/webapp boundary docs and forbidden leakage patterns.
+- `toolkit-xtask check parity_ledger`
+  Validates repo-owned parity ledger headings and required table structure.
+- `toolkit-xtask check ci_assurance_lanes`
+  Validates repo-owned justfile and workflow lane contracts for canonical CI entrypoints.
+- `toolkit-xtask check git_dependency_pins`
+  Validates repo-owned JSON git revision ledgers against checked-out dependency repos.
+- `toolkit-xtask check protocol_machine_placeholders`
+  Enforces forbidden placeholder and proof-import patterns over repo-owned protocol-machine implementation trees.
 - `toolkit-install-dylint`
   Installs `cargo-dylint` and `dylint-link`, then links the pinned nightly
   toolchain name used by toolkit lint runs.

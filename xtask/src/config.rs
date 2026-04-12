@@ -44,6 +44,7 @@ pub struct ChecksConfig {
     pub formal_claim_scope: Option<FileLiteralContractsConfig>,
     pub parity_ledger: Option<FileLiteralContractsConfig>,
     pub durable_boundaries: Option<ScopedPatternContractsConfig>,
+    pub protocol_machine_placeholders: Option<ScopedPatternContractsConfig>,
     pub search_boundaries: Option<ScopedPatternContractsConfig>,
     pub viewer_tooling_boundaries: Option<ScopedPatternContractsConfig>,
     pub git_dependency_pins: Option<GitDependencyPinsConfig>,
@@ -412,6 +413,10 @@ fn parse_checks_config(value: &toml::Value) -> Result<ChecksConfig> {
         .get("durable_boundaries")
         .map(parse_scoped_pattern_contracts_config)
         .transpose()?;
+    let protocol_machine_placeholders = table
+        .get("protocol_machine_placeholders")
+        .map(parse_scoped_pattern_contracts_config)
+        .transpose()?;
     let search_boundaries = table
         .get("search_boundaries")
         .map(parse_scoped_pattern_contracts_config)
@@ -501,6 +506,7 @@ fn parse_checks_config(value: &toml::Value) -> Result<ChecksConfig> {
                 | "formal_claim_scope"
                 | "parity_ledger"
                 | "durable_boundaries"
+                | "protocol_machine_placeholders"
                 | "search_boundaries"
                 | "viewer_tooling_boundaries"
                 | "git_dependency_pins"
@@ -538,6 +544,7 @@ fn parse_checks_config(value: &toml::Value) -> Result<ChecksConfig> {
         formal_claim_scope,
         parity_ledger,
         durable_boundaries,
+        protocol_machine_placeholders,
         search_boundaries,
         viewer_tooling_boundaries,
         git_dependency_pins,

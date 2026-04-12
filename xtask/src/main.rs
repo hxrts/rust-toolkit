@@ -150,6 +150,11 @@ fn run_check(args: &[String]) -> Result<()> {
             print_flat_findings(name.as_str(), &findings);
             return if findings.is_empty() { Ok(()) } else { bail!("{name} failed") };
         },
+        | "ci-assurance-lanes" => {
+            let findings = checks::ci_assurance_lanes::run(&repo_root, &config)?;
+            print_flat_findings(name.as_str(), &findings);
+            return if findings.is_empty() { Ok(()) } else { bail!("{name} failed") };
+        },
         | "formal-claim-scope" => {
             let findings = checks::formal_claim_scope::run(&repo_root, &config)?;
             print_flat_findings(name.as_str(), &findings);
@@ -165,6 +170,12 @@ fn run_check(args: &[String]) -> Result<()> {
             print_flat_findings(name.as_str(), &findings);
             return if findings.is_empty() { Ok(()) } else { bail!("{name} failed") };
         },
+        | "protocol-machine-placeholders" => {
+            let findings =
+                checks::protocol_machine_placeholders::run(&repo_root, &config)?;
+            print_flat_findings(name.as_str(), &findings);
+            return if findings.is_empty() { Ok(()) } else { bail!("{name} failed") };
+        },
         | "search-boundaries" => {
             let findings = checks::search_boundaries::run(&repo_root, &config)?;
             print_flat_findings(name.as_str(), &findings);
@@ -172,6 +183,11 @@ fn run_check(args: &[String]) -> Result<()> {
         },
         | "viewer-tooling-boundaries" => {
             let findings = checks::viewer_tooling_boundaries::run(&repo_root, &config)?;
+            print_flat_findings(name.as_str(), &findings);
+            return if findings.is_empty() { Ok(()) } else { bail!("{name} failed") };
+        },
+        | "git-dependency-pins" => {
+            let findings = checks::git_dependency_pins::run(&repo_root, &config)?;
             print_flat_findings(name.as_str(), &findings);
             return if findings.is_empty() { Ok(()) } else { bail!("{name} failed") };
         },
