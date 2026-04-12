@@ -40,11 +40,13 @@ pub struct ChecksConfig {
     pub docs_link_check: Option<DocsLinkCheckConfig>,
     pub docs_index: Option<DocsIndexConfig>,
     pub docs_semantic_drift: Option<DocsSemanticDriftConfig>,
+    pub ci_assurance_lanes: Option<CiAssuranceLanesConfig>,
     pub formal_claim_scope: Option<FileLiteralContractsConfig>,
     pub parity_ledger: Option<FileLiteralContractsConfig>,
     pub durable_boundaries: Option<ScopedPatternContractsConfig>,
     pub search_boundaries: Option<ScopedPatternContractsConfig>,
     pub viewer_tooling_boundaries: Option<ScopedPatternContractsConfig>,
+    pub git_dependency_pins: Option<GitDependencyPinsConfig>,
     pub workflow_actions: Option<WorkflowActionsConfig>,
     pub text_formatting: Option<TextFormattingConfig>,
     pub workspace_hygiene: Option<WorkspaceHygieneConfig>,
@@ -167,6 +169,21 @@ pub struct DocsSemanticDriftConfig {
 }
 
 #[derive(Debug, Clone)]
+pub struct CiAssuranceLanesConfig {
+    pub enabled: bool,
+    pub justfile_path: String,
+    pub recipe_contracts: Vec<JustRecipeContract>,
+    pub file_contracts: Vec<FileLiteralContract>,
+}
+
+#[derive(Debug, Clone)]
+pub struct JustRecipeContract {
+    pub recipe: String,
+    pub required_literals: Vec<String>,
+    pub forbidden_literals: Vec<String>,
+}
+
+#[derive(Debug, Clone)]
 pub struct FileLiteralContractsConfig {
     pub enabled: bool,
     pub files: Vec<FileLiteralContract>,
@@ -190,6 +207,12 @@ pub struct ScopedPatternContractsConfig {
 pub struct ScopedPatternContract {
     pub pattern: String,
     pub include_paths: Vec<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct GitDependencyPinsConfig {
+    pub enabled: bool,
+    pub pins_file: String,
 }
 
 #[derive(Debug, Clone)]
@@ -373,6 +396,10 @@ fn parse_checks_config(value: &toml::Value) -> Result<ChecksConfig> {
         .get("docs_semantic_drift")
         .map(parse_docs_semantic_drift_config)
         .transpose()?;
+    let ci_assurance_lanes = table
+        .get("ci_assurance_lanes")
+        .map(parse_ci_assurance_lanes_config)
+        .transpose()?;
     let formal_claim_scope = table
         .get("formal_claim_scope")
         .map(parse_file_literal_contracts_config)
@@ -392,6 +419,10 @@ fn parse_checks_config(value: &toml::Value) -> Result<ChecksConfig> {
     let viewer_tooling_boundaries = table
         .get("viewer_tooling_boundaries")
         .map(parse_scoped_pattern_contracts_config)
+        .transpose()?;
+    let git_dependency_pins = table
+        .get("git_dependency_pins")
+        .map(parse_git_dependency_pins_config)
         .transpose()?;
     let workflow_actions = table
         .get("workflow_actions")
@@ -466,11 +497,13 @@ fn parse_checks_config(value: &toml::Value) -> Result<ChecksConfig> {
                 | "docs_link_check"
                 | "docs_index"
                 | "docs_semantic_drift"
+                | "ci_assurance_lanes"
                 | "formal_claim_scope"
                 | "parity_ledger"
                 | "durable_boundaries"
                 | "search_boundaries"
                 | "viewer_tooling_boundaries"
+                | "git_dependency_pins"
                 | "workflow_actions"
                 | "text_formatting"
                 | "workspace_hygiene"
@@ -501,11 +534,13 @@ fn parse_checks_config(value: &toml::Value) -> Result<ChecksConfig> {
         docs_link_check,
         docs_index,
         docs_semantic_drift,
+        ci_assurance_lanes,
         formal_claim_scope,
         parity_ledger,
         durable_boundaries,
         search_boundaries,
         viewer_tooling_boundaries,
+        git_dependency_pins,
         workflow_actions,
         text_formatting,
         workspace_hygiene,
@@ -681,6 +716,34 @@ fn parse_docs_semantic_drift_config(
     })
 }
 
+fn parse_ci_assurance_lanes_config(
+    value: &toml::Value,
+) -> Result<CiAssuranceLanesConfig> {
+    let table = expect_table(value, "checks.ci_assurance_lanes")?;
+    Ok(CiAssuranceLanesConfig {
+        enabled: required_bool(table, "enabled")?,
+        justfile_path: required_string(table, "justfile_path")?,
+        recipe_contracts: optional_table_array(table, "recipe_contracts")?
+            .into_iter()
+            .map(parse_just_recipe_contract)
+            .collect::<Result<Vec<_>>>()?,
+        file_contracts: optional_table_array(table, "file_contracts")?
+            .into_iter()
+            .map(parse_file_literal_contract)
+            .collect::<Result<Vec<_>>>()?,
+    })
+}
+
+fn parse_just_recipe_contract(
+    table: &toml::map::Map<String, toml::Value>,
+) -> Result<JustRecipeContract> {
+    Ok(JustRecipeContract {
+        recipe: required_string(table, "recipe")?,
+        required_literals: optional_string_list(table, "required_literals")?,
+        forbidden_literals: optional_string_list(table, "forbidden_literals")?,
+    })
+}
+
 fn parse_file_literal_contracts_config(
     value: &toml::Value,
 ) -> Result<FileLiteralContractsConfig> {
@@ -727,6 +790,16 @@ fn parse_scoped_pattern_contract(
     Ok(ScopedPatternContract {
         pattern: required_string(table, "pattern")?,
         include_paths: required_string_list(table, "include_paths")?,
+    })
+}
+
+fn parse_git_dependency_pins_config(
+    value: &toml::Value,
+) -> Result<GitDependencyPinsConfig> {
+    let table = expect_table(value, "checks.git_dependency_pins")?;
+    Ok(GitDependencyPinsConfig {
+        enabled: required_bool(table, "enabled")?,
+        pins_file: required_string(table, "pins_file")?,
     })
 }
 
