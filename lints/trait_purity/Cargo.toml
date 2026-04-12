@@ -3,7 +3,7 @@
 
 [package]
 name = "jacquard-trait-purity"
-version = "0.1.1"
+version = "0.2.0"
 edition = "2021"
 description = "Dylint checks for Jacquard trait purity/effect annotations"
 
