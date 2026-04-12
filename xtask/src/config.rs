@@ -63,6 +63,10 @@ pub struct ChecksConfig {
     pub limit_constant: Option<LimitConstantConfig>,
     pub public_type_width: Option<PublicTypeWidthConfig>,
     pub dependency_policy: Option<DependencyPolicyConfig>,
+    pub unwrap_guard: Option<UnwrapGuardConfig>,
+    pub allow_attribute_guard: Option<AllowAttributeGuardConfig>,
+    pub doc_coverage: Option<DocCoverageConfig>,
+    pub cloning_boundary: Option<CloningBoundaryConfig>,
     pub extra: BTreeMap<String, toml::Value>,
 }
 
@@ -317,6 +321,38 @@ pub struct DependencyPolicyConfig {
 }
 
 #[derive(Debug, Clone)]
+pub struct UnwrapGuardConfig {
+    pub enabled: bool,
+    pub include_paths: Vec<String>,
+    pub exclude_path_parts: Vec<String>,
+    pub allow_comment_marker: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct AllowAttributeGuardConfig {
+    pub enabled: bool,
+    pub include_paths: Vec<String>,
+    pub exclude_path_parts: Vec<String>,
+    pub allow_comment_marker: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct DocCoverageConfig {
+    pub enabled: bool,
+    pub include_paths: Vec<String>,
+    pub exclude_path_parts: Vec<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct CloningBoundaryConfig {
+    pub enabled: bool,
+    pub include_paths: Vec<String>,
+    pub exclude_path_parts: Vec<String>,
+    pub allow_comment_marker: String,
+    pub banned_derives: Vec<String>,
+}
+
+#[derive(Debug, Clone)]
 pub struct WorkflowActionsConfig {
     pub enabled: bool,
     pub workflow_roots: Vec<String>,
@@ -489,6 +525,22 @@ fn parse_checks_config(value: &toml::Value) -> Result<ChecksConfig> {
         .get("dependency_policy")
         .map(parse_dependency_policy_config)
         .transpose()?;
+    let unwrap_guard = table
+        .get("unwrap_guard")
+        .map(parse_unwrap_guard_config)
+        .transpose()?;
+    let allow_attribute_guard = table
+        .get("allow_attribute_guard")
+        .map(parse_allow_attribute_guard_config)
+        .transpose()?;
+    let doc_coverage = table
+        .get("doc_coverage")
+        .map(parse_doc_coverage_config)
+        .transpose()?;
+    let cloning_boundary = table
+        .get("cloning_boundary")
+        .map(parse_cloning_boundary_config)
+        .transpose()?;
 
     let mut extra = BTreeMap::new();
     for (key, value) in table {
@@ -525,6 +577,10 @@ fn parse_checks_config(value: &toml::Value) -> Result<ChecksConfig> {
                 | "limit_constant"
                 | "public_type_width"
                 | "dependency_policy"
+                | "unwrap_guard"
+                | "allow_attribute_guard"
+                | "doc_coverage"
+                | "cloning_boundary"
         ) {
             continue;
         }
@@ -563,6 +619,10 @@ fn parse_checks_config(value: &toml::Value) -> Result<ChecksConfig> {
         limit_constant,
         public_type_width,
         dependency_policy,
+        unwrap_guard,
+        allow_attribute_guard,
+        doc_coverage,
+        cloning_boundary,
         extra,
     })
 }
@@ -962,6 +1022,48 @@ fn parse_dependency_policy_config(
     })
 }
 
+fn parse_unwrap_guard_config(value: &toml::Value) -> Result<UnwrapGuardConfig> {
+    let table = expect_table(value, "checks.unwrap_guard")?;
+    Ok(UnwrapGuardConfig {
+        enabled: required_bool(table, "enabled")?,
+        include_paths: required_string_list(table, "include_paths")?,
+        exclude_path_parts: optional_string_list(table, "exclude_path_parts")?,
+        allow_comment_marker: required_string(table, "allow_comment_marker")?,
+    })
+}
+
+fn parse_allow_attribute_guard_config(
+    value: &toml::Value,
+) -> Result<AllowAttributeGuardConfig> {
+    let table = expect_table(value, "checks.allow_attribute_guard")?;
+    Ok(AllowAttributeGuardConfig {
+        enabled: required_bool(table, "enabled")?,
+        include_paths: required_string_list(table, "include_paths")?,
+        exclude_path_parts: optional_string_list(table, "exclude_path_parts")?,
+        allow_comment_marker: required_string(table, "allow_comment_marker")?,
+    })
+}
+
+fn parse_doc_coverage_config(value: &toml::Value) -> Result<DocCoverageConfig> {
+    let table = expect_table(value, "checks.doc_coverage")?;
+    Ok(DocCoverageConfig {
+        enabled: required_bool(table, "enabled")?,
+        include_paths: required_string_list(table, "include_paths")?,
+        exclude_path_parts: optional_string_list(table, "exclude_path_parts")?,
+    })
+}
+
+fn parse_cloning_boundary_config(value: &toml::Value) -> Result<CloningBoundaryConfig> {
+    let table = expect_table(value, "checks.cloning_boundary")?;
+    Ok(CloningBoundaryConfig {
+        enabled: required_bool(table, "enabled")?,
+        include_paths: required_string_list(table, "include_paths")?,
+        exclude_path_parts: optional_string_list(table, "exclude_path_parts")?,
+        allow_comment_marker: required_string(table, "allow_comment_marker")?,
+        banned_derives: optional_string_list(table, "banned_derives")?,
+    })
+}
+
 fn parse_bundles_config(value: &toml::Value) -> Result<BundlesConfig> {
     let table = expect_table(value, "bundles")?;
     let rust_base = table
@@ -1151,6 +1253,58 @@ fn apply_rust_base_bundle(checks: &mut ChecksConfig, bundle: &RustBaseBundle) {
             enabled: true,
             workflow_roots: workflows.clone(),
             pin_comment_markers: vec!["pin".to_string()],
+        });
+    }
+    if checks.unwrap_guard.is_none() {
+        checks.unwrap_guard = Some(UnwrapGuardConfig {
+            enabled: true,
+            include_paths: rust.clone(),
+            exclude_path_parts: vec![
+                "/tests/".to_string(),
+                "/benches/".to_string(),
+                "/examples/".to_string(),
+                "/target/".to_string(),
+            ],
+            allow_comment_marker: "unwrap-safe:".to_string(),
+        });
+    }
+    if checks.allow_attribute_guard.is_none() {
+        checks.allow_attribute_guard = Some(AllowAttributeGuardConfig {
+            enabled: true,
+            include_paths: rust.clone(),
+            exclude_path_parts: vec![
+                "/tests/".to_string(),
+                "/benches/".to_string(),
+                "/examples/".to_string(),
+                "/target/".to_string(),
+            ],
+            allow_comment_marker: "allow-lint:".to_string(),
+        });
+    }
+    if checks.doc_coverage.is_none() {
+        checks.doc_coverage = Some(DocCoverageConfig {
+            enabled: true,
+            include_paths: rust.clone(),
+            exclude_path_parts: vec![
+                "/tests/".to_string(),
+                "/benches/".to_string(),
+                "/examples/".to_string(),
+                "/target/".to_string(),
+            ],
+        });
+    }
+    if checks.cloning_boundary.is_none() {
+        checks.cloning_boundary = Some(CloningBoundaryConfig {
+            enabled: true,
+            include_paths: rust.clone(),
+            exclude_path_parts: vec![
+                "/tests/".to_string(),
+                "/benches/".to_string(),
+                "/examples/".to_string(),
+                "/target/".to_string(),
+            ],
+            allow_comment_marker: "clone-allowed:".to_string(),
+            banned_derives: vec!["Clone".to_string()],
         });
     }
 }

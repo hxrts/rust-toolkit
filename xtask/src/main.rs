@@ -211,6 +211,26 @@ fn run_check(args: &[String]) -> Result<()> {
             print_flat_findings(name.as_str(), &findings);
             return if findings.is_empty() { Ok(()) } else { bail!("{name} failed") };
         },
+        | "unwrap-guard" => {
+            let findings = checks::unwrap_guard::run(&repo_root, &config)?;
+            print_flat_findings(name.as_str(), &findings);
+            return if findings.is_empty() { Ok(()) } else { bail!("{name} failed") };
+        },
+        | "allow-attribute-guard" => {
+            let findings = checks::allow_attribute_guard::run(&repo_root, &config)?;
+            print_flat_findings(name.as_str(), &findings);
+            return if findings.is_empty() { Ok(()) } else { bail!("{name} failed") };
+        },
+        | "doc-coverage" => {
+            let findings = checks::doc_coverage::run(&repo_root, &config)?;
+            print_flat_findings(name.as_str(), &findings);
+            return if findings.is_empty() { Ok(()) } else { bail!("{name} failed") };
+        },
+        | "cloning-boundary" => {
+            let findings = checks::cloning_boundary::run(&repo_root, &config)?;
+            print_flat_findings(name.as_str(), &findings);
+            return if findings.is_empty() { Ok(()) } else { bail!("{name} failed") };
+        },
         | _ => bail!("toolkit-xtask: unknown check: {name}"),
     };
     print_findings(name.as_str(), &findings);
