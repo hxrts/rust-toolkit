@@ -2,7 +2,6 @@
 name = "toolkit-style-limits"
 version = "0.1.1"
 edition = "2021"
-publish = false
 description = "Portable dylint checks for source size limits"
 
 [lib]

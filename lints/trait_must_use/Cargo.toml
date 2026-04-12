@@ -6,7 +6,6 @@
 name = "toolkit-trait-must-use"
 version = "0.1.1"
 edition = "2021"
-publish = false
 description = "Dylint check: public trait methods with non-unit return types must carry #[must_use]"
 
 [lib]
