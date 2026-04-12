@@ -4,7 +4,9 @@
 name = "rust-toolkit-macros"
 version = "0.1.1"
 edition = "2021"
+description = "Proc macros for the rust-toolkit policy framework"
 license = "Apache-2.0"
+repository = "https://github.com/hxrts/toolkit"
 
 [lib]
 proc-macro = true
