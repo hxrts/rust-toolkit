@@ -224,6 +224,13 @@ fn show_config(args: &[String]) -> Result<()> {
     println!("crate_roots = {:?}", config.workspace.crate_roots);
     println!("include_crates = {:?}", config.workspace.include_crates);
     println!("exclude_crates = {:?}", config.workspace.exclude_crates);
+    if let Some(bundle) = &config.bundles.rust_base {
+        println!("bundles.rust_base.enabled = {}", bundle.enabled);
+        println!("bundles.rust_base.rust_roots = {:?}", bundle.rust_roots);
+        println!("bundles.rust_base.docs_roots = {:?}", bundle.docs_roots);
+        println!("bundles.rust_base.manifest_path = {:?}", bundle.manifest_path);
+        println!("bundles.rust_base.workflow_roots = {:?}", bundle.workflow_roots);
+    }
     println!(
         "extra_check_keys = {:?}",
         config.checks.extra.keys().collect::<Vec<_>>()

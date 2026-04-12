@@ -6,6 +6,21 @@ use anyhow::{bail, Context, Result};
 pub struct ToolkitConfig {
     pub workspace: WorkspaceConfig,
     pub checks: ChecksConfig,
+    pub bundles: BundlesConfig,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct BundlesConfig {
+    pub rust_base: Option<RustBaseBundle>,
+}
+
+#[derive(Debug, Clone)]
+pub struct RustBaseBundle {
+    pub enabled: bool,
+    pub rust_roots: Vec<String>,
+    pub docs_roots: Vec<String>,
+    pub manifest_path: String,
+    pub workflow_roots: Vec<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -258,11 +273,18 @@ fn parse_toolkit_config(value: &toml::Value) -> Result<ToolkitConfig> {
         parse_workspace_config(table.get("workspace").ok_or_else(|| {
             anyhow::anyhow!("toolkit config missing [workspace] section")
         })?)?;
-    let checks = match table.get("checks") {
+    let mut checks = match table.get("checks") {
         | Some(value) => parse_checks_config(value)?,
         | None => ChecksConfig::default(),
     };
-    Ok(ToolkitConfig { workspace, checks })
+    let bundles = match table.get("bundles") {
+        | Some(value) => parse_bundles_config(value)?,
+        | None => BundlesConfig::default(),
+    };
+    if let Some(bundle) = &bundles.rust_base {
+        apply_rust_base_bundle(&mut checks, bundle);
+    }
+    Ok(ToolkitConfig { workspace, checks, bundles })
 }
 
 fn parse_workspace_config(value: &toml::Value) -> Result<WorkspaceConfig> {
@@ -741,6 +763,199 @@ fn parse_dependency_policy_config(
         )?,
         banned_dependencies: optional_string_list(table, "banned_dependencies")?,
     })
+}
+
+fn parse_bundles_config(value: &toml::Value) -> Result<BundlesConfig> {
+    let table = expect_table(value, "bundles")?;
+    let rust_base = table
+        .get("rust_base")
+        .map(parse_rust_base_bundle)
+        .transpose()?;
+    Ok(BundlesConfig { rust_base })
+}
+
+fn parse_rust_base_bundle(value: &toml::Value) -> Result<RustBaseBundle> {
+    let table = expect_table(value, "bundles.rust_base")?;
+    Ok(RustBaseBundle {
+        enabled: required_bool(table, "enabled")?,
+        rust_roots: required_string_list(table, "rust_roots")?,
+        docs_roots: optional_string_list(table, "docs_roots")?,
+        manifest_path: match table.get("manifest_path") {
+            | Some(v) => v
+                .as_str()
+                .map(str::to_owned)
+                .ok_or_else(|| anyhow::anyhow!("manifest_path must be a string"))?,
+            | None => "Cargo.toml".to_string(),
+        },
+        workflow_roots: match table.get("workflow_roots") {
+            | Some(v) => string_list(v, "workflow_roots")?,
+            | None => vec![".github/workflows".to_string()],
+        },
+    })
+}
+
+// long-block-exception: bundle application fills in each check independently;
+// explicit [checks.*] sections always take precedence over bundle defaults
+fn apply_rust_base_bundle(checks: &mut ChecksConfig, bundle: &RustBaseBundle) {
+    if !bundle.enabled {
+        return;
+    }
+    let rust = &bundle.rust_roots;
+    let docs = &bundle.docs_roots;
+    let manifest = bundle.manifest_path.clone();
+    let workflows = &bundle.workflow_roots;
+    if checks.proc_macro_scope.is_none() {
+        checks.proc_macro_scope = Some(ProcMacroScopeConfig {
+            enabled: true,
+            include_paths: rust.clone(),
+            required_markers: vec![],
+            exclude_files: vec![],
+        });
+    }
+    if checks.result_must_use.is_none() {
+        checks.result_must_use = Some(ResultMustUseConfig {
+            enabled: true,
+            include_paths: rust.clone(),
+        });
+    }
+    if checks.test_boundaries.is_none() {
+        checks.test_boundaries = Some(TestBoundariesConfig {
+            enabled: true,
+            scan_roots: rust.clone(),
+            exclude_prefixes: vec![],
+            exclude_path_parts: vec![
+                "/tests/".to_string(),
+                "/benches/".to_string(),
+                "/examples/".to_string(),
+                "/target/".to_string(),
+            ],
+        });
+    }
+    if !docs.is_empty() {
+        if checks.docs_link_check.is_none() {
+            checks.docs_link_check = Some(DocsLinkCheckConfig {
+                enabled: true,
+                docs_roots: docs.clone(),
+                scratch_dir_prefix: "work/".to_string(),
+            });
+        }
+        if checks.docs_semantic_drift.is_none() {
+            checks.docs_semantic_drift = Some(DocsSemanticDriftConfig {
+                enabled: true,
+                docs_roots: docs.clone(),
+                manifest_path: manifest.clone(),
+                planned_crates: vec![],
+                file_exemptions: vec![],
+            });
+        }
+        if checks.text_formatting.is_none() {
+            checks.text_formatting = Some(TextFormattingConfig {
+                enabled: true,
+                include_paths: docs.clone(),
+                exclude_path_parts: vec![],
+            });
+        }
+    }
+    if checks.workspace_hygiene.is_none() {
+        checks.workspace_hygiene = Some(WorkspaceHygieneConfig {
+            enabled: true,
+            include_paths: rust.clone(),
+            exclude_path_parts: vec![],
+        });
+    }
+    if checks.crate_root_policy.is_none() {
+        checks.crate_root_policy = Some(CrateRootPolicyConfig {
+            enabled: true,
+            required_attributes: vec![],
+        });
+    }
+    if checks.ignored_result.is_none() {
+        checks.ignored_result = Some(IgnoredResultConfig {
+            enabled: true,
+            include_paths: rust.clone(),
+            allowed_comment_markers: vec!["allow-ignored-result:".to_string()],
+        });
+    }
+    if checks.unsafe_boundary.is_none() {
+        checks.unsafe_boundary = Some(UnsafeBoundaryConfig {
+            enabled: true,
+            include_paths: rust.clone(),
+            exclude_path_parts: vec![],
+            allowed_path_parts: vec![],
+            required_comment_markers: vec!["Safety:".to_string()],
+        });
+    }
+    if checks.bool_param.is_none() {
+        checks.bool_param = Some(BoolParamConfig {
+            enabled: true,
+            include_paths: rust.clone(),
+        });
+    }
+    if checks.must_use_public_return.is_none() {
+        checks.must_use_public_return = Some(MustUsePublicReturnConfig {
+            enabled: true,
+            include_paths: rust.clone(),
+            exclude_path_parts: vec![],
+            allowed_return_type_prefixes: vec![],
+        });
+    }
+    if checks.assert_shape.is_none() {
+        checks.assert_shape = Some(AssertShapeConfig {
+            enabled: true,
+            include_paths: rust.clone(),
+        });
+    }
+    if checks.drop_side_effects.is_none() {
+        checks.drop_side_effects = Some(DropSideEffectsConfig {
+            enabled: true,
+            include_paths: rust.clone(),
+            allow_comment_marker: "drop-side-effects-exception:".to_string(),
+        });
+    }
+    if checks.recursion_guard.is_none() {
+        checks.recursion_guard = Some(RecursionGuardConfig {
+            enabled: true,
+            include_paths: rust.clone(),
+            exclude_path_parts: vec![],
+            allow_comment_marker: "recursion-exception:".to_string(),
+        });
+    }
+    if checks.naming_units.is_none() {
+        checks.naming_units = Some(NamingUnitsConfig {
+            enabled: true,
+            include_paths: rust.clone(),
+        });
+    }
+    if checks.limit_constant.is_none() {
+        checks.limit_constant = Some(LimitConstantConfig {
+            enabled: true,
+            include_paths: rust.clone(),
+            allow_comment_marker: "limit-constant-exception:".to_string(),
+        });
+    }
+    if checks.public_type_width.is_none() {
+        checks.public_type_width = Some(PublicTypeWidthConfig {
+            enabled: true,
+            include_paths: rust.clone(),
+            exclude_path_parts: vec![],
+            banned_types: vec![],
+        });
+    }
+    if checks.dependency_policy.is_none() {
+        checks.dependency_policy = Some(DependencyPolicyConfig {
+            enabled: true,
+            manifest_roots: rust.clone(),
+            require_default_features_false: vec![],
+            banned_dependencies: vec![],
+        });
+    }
+    if checks.workflow_actions.is_none() {
+        checks.workflow_actions = Some(WorkflowActionsConfig {
+            enabled: true,
+            workflow_roots: workflows.clone(),
+            pin_comment_markers: vec!["pin".to_string()],
+        });
+    }
 }
 
 fn parse_workflow_actions_config(value: &toml::Value) -> Result<WorkflowActionsConfig> {

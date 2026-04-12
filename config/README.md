@@ -61,3 +61,47 @@ Additional generic text and workspace checks can use keys such as:
 - `checks.workspace_hygiene.include_paths`
 - `checks.workspace_hygiene.exclude_path_parts`
 - `checks.docs_semantic_drift.file_exemptions`
+
+## Bundles
+
+Bundles enable a named group of checks with shared path configuration and
+conventional defaults. An explicit `[checks.*]` section always takes precedence
+over a bundle default.
+
+### `rust-base`
+
+Enables all generic Rust checks in one block:
+
+```toml
+[bundles.rust_base]
+enabled = true
+rust_roots = ["crates"]
+docs_roots = ["docs"]        # optional; omit to skip docs checks
+manifest_path = "Cargo.toml" # optional; defaults to "Cargo.toml"
+workflow_roots = [".github/workflows"] # optional; defaults to [".github/workflows"]
+```
+
+Checks activated by `rust-base`:
+
+- `proc-macro-scope` (required_markers defaults to [])
+- `result-must-use`
+- `test-boundaries`
+- `docs-link-check` (only when docs_roots is non-empty)
+- `docs-semantic-drift` (only when docs_roots is non-empty)
+- `text-formatting` (only when docs_roots is non-empty)
+- `workspace-hygiene`
+- `crate-root-policy` (required_attributes defaults to [])
+- `ignored-result`
+- `unsafe-boundary`
+- `bool-param`
+- `must-use-public-return`
+- `assert-shape`
+- `drop-side-effects`
+- `recursion-guard`
+- `naming-units`
+- `limit-constant`
+- `public-type-width` (banned_types defaults to [])
+- `dependency-policy`
+- `workflow-actions`
+
+Override any check by adding its `[checks.*]` section alongside the bundle.
