@@ -2,7 +2,7 @@ use std::path::Path;
 
 use anyhow::Result;
 
-use crate::{config::ToolkitConfig, report::FlatFindingSet};
+use crate::{config::ToolkitConfig, report::FlatFindingSet, util::normalize_rel_path};
 
 pub fn run(repo_root: &Path, config: &ToolkitConfig) -> Result<FlatFindingSet> {
     let Some(check) = &config.checks.workspace_hygiene else {
@@ -97,13 +97,6 @@ fn is_empty_directory(path: &Path, exclude_path_parts: &[String]) -> bool {
         return false;
     }
     true
-}
-
-fn normalize_rel_path(root: &Path, path: &Path) -> String {
-    path.strip_prefix(root)
-        .unwrap_or(path)
-        .to_string_lossy()
-        .replace('\\', "/")
 }
 
 #[cfg(test)]

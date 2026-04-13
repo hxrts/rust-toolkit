@@ -2,12 +2,11 @@ use std::{fs, path::Path};
 
 use anyhow::{Context, Result};
 use regex::Regex;
-use walkdir::WalkDir;
 
 use crate::{
-    config::{ResultMustUseConfig, ToolkitConfig},
+    config::ToolkitConfig,
     report::FlatFindingSet,
-    util::matching_brace,
+    util::{collect_rust_files, matching_brace, normalize_rel_path},
 };
 
 pub fn run(repo_root: &Path, config: &ToolkitConfig) -> Result<FlatFindingSet> {
@@ -19,46 +18,17 @@ pub fn run(repo_root: &Path, config: &ToolkitConfig) -> Result<FlatFindingSet> {
     }
 
     let mut findings = FlatFindingSet::default();
-    for include_path in &check.include_paths {
-        let full = repo_root.join(include_path);
-        if !full.exists() {
-            continue;
-        }
-        scan_tree(repo_root, &full, check, &mut findings)?;
-    }
-
-    Ok(findings)
-}
-
-fn scan_tree(
-    repo_root: &Path,
-    root: &Path,
-    _check: &ResultMustUseConfig,
-    findings: &mut FlatFindingSet,
-) -> Result<()> {
-    for entry in WalkDir::new(root).into_iter().filter_map(Result::ok) {
-        if !entry.file_type().is_file()
-            || entry.path().extension().and_then(|ext| ext.to_str()) != Some("rs")
-        {
-            continue;
-        }
-        let rel = entry
-            .path()
-            .strip_prefix(repo_root)
-            .with_context(|| {
-                format!("computing relative path for {}", entry.path().display())
-            })?
-            .to_string_lossy()
-            .replace('\\', "/");
-        let source = fs::read_to_string(entry.path())
-            .with_context(|| format!("reading {}", entry.path().display()))?;
+    for path in collect_rust_files(repo_root, &check.include_paths)? {
+        let rel = normalize_rel_path(repo_root, &path);
+        let source = fs::read_to_string(&path)
+            .with_context(|| format!("reading {}", path.display()))?;
         for (trait_name, method_name) in find_missing_must_use(&source)? {
             findings.entries.insert(format!(
                 "{rel}:1: trait {trait_name} method {method_name} returns Result without #[must_use]"
             ));
         }
     }
-    Ok(())
+    Ok(findings)
 }
 
 fn find_missing_must_use(source: &str) -> Result<Vec<(String, String)>> {
