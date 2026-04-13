@@ -67,6 +67,7 @@ pub struct ChecksConfig {
     pub allow_attribute_guard: Option<AllowAttributeGuardConfig>,
     pub doc_coverage: Option<DocCoverageConfig>,
     pub cloning_boundary: Option<CloningBoundaryConfig>,
+    pub fn_length: Option<FnLengthConfig>,
     pub extra: BTreeMap<String, toml::Value>,
 }
 
@@ -353,6 +354,16 @@ pub struct CloningBoundaryConfig {
 }
 
 #[derive(Debug, Clone)]
+pub struct FnLengthConfig {
+    pub enabled: bool,
+    pub include_paths: Vec<String>,
+    pub exclude_path_parts: Vec<String>,
+    pub warn_lines: usize,
+    pub hard_lines: usize,
+    pub allow_comment_marker: String,
+}
+
+#[derive(Debug, Clone)]
 pub struct WorkflowActionsConfig {
     pub enabled: bool,
     pub workflow_roots: Vec<String>,
@@ -541,6 +552,10 @@ fn parse_checks_config(value: &toml::Value) -> Result<ChecksConfig> {
         .get("cloning_boundary")
         .map(parse_cloning_boundary_config)
         .transpose()?;
+    let fn_length = table
+        .get("fn_length")
+        .map(parse_fn_length_config)
+        .transpose()?;
 
     let mut extra = BTreeMap::new();
     for (key, value) in table {
@@ -581,6 +596,7 @@ fn parse_checks_config(value: &toml::Value) -> Result<ChecksConfig> {
                 | "allow_attribute_guard"
                 | "doc_coverage"
                 | "cloning_boundary"
+                | "fn_length"
         ) {
             continue;
         }
@@ -623,6 +639,7 @@ fn parse_checks_config(value: &toml::Value) -> Result<ChecksConfig> {
         allow_attribute_guard,
         doc_coverage,
         cloning_boundary,
+        fn_length,
         extra,
     })
 }
@@ -1022,6 +1039,18 @@ fn parse_dependency_policy_config(
     })
 }
 
+fn parse_fn_length_config(value: &toml::Value) -> Result<FnLengthConfig> {
+    let table = expect_table(value, "checks.fn_length")?;
+    Ok(FnLengthConfig {
+        enabled: required_bool(table, "enabled")?,
+        include_paths: required_string_list(table, "include_paths")?,
+        exclude_path_parts: optional_string_list(table, "exclude_path_parts")?,
+        warn_lines: required_usize(table, "warn_lines")?,
+        hard_lines: required_usize(table, "hard_lines")?,
+        allow_comment_marker: required_string(table, "allow_comment_marker")?,
+    })
+}
+
 fn parse_unwrap_guard_config(value: &toml::Value) -> Result<UnwrapGuardConfig> {
     let table = expect_table(value, "checks.unwrap_guard")?;
     Ok(UnwrapGuardConfig {
@@ -1165,7 +1194,10 @@ fn apply_rust_base_bundle(checks: &mut ChecksConfig, bundle: &RustBaseBundle) {
     if checks.crate_root_policy.is_none() {
         checks.crate_root_policy = Some(CrateRootPolicyConfig {
             enabled: true,
-            required_attributes: vec![],
+            required_attributes: vec![
+                "#![forbid(unsafe_code)]".to_string(),
+                "#[deny(unreachable_pub)]".to_string(),
+            ],
         });
     }
     if checks.ignored_result.is_none() {
@@ -1237,7 +1269,7 @@ fn apply_rust_base_bundle(checks: &mut ChecksConfig, bundle: &RustBaseBundle) {
             enabled: true,
             include_paths: rust.clone(),
             exclude_path_parts: vec![],
-            banned_types: vec![],
+            banned_types: vec!["usize".to_string()],
         });
     }
     if checks.dependency_policy.is_none() {
@@ -1305,6 +1337,21 @@ fn apply_rust_base_bundle(checks: &mut ChecksConfig, bundle: &RustBaseBundle) {
             ],
             allow_comment_marker: "clone-allowed:".to_string(),
             banned_derives: vec!["Clone".to_string()],
+        });
+    }
+    if checks.fn_length.is_none() {
+        checks.fn_length = Some(FnLengthConfig {
+            enabled: true,
+            include_paths: rust.clone(),
+            exclude_path_parts: vec![
+                "/tests/".to_string(),
+                "/benches/".to_string(),
+                "/examples/".to_string(),
+                "/target/".to_string(),
+            ],
+            warn_lines: 60,
+            hard_lines: 100,
+            allow_comment_marker: "long-fn-exception:".to_string(),
         });
     }
 }

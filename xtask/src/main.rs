@@ -231,6 +231,11 @@ fn run_check(args: &[String]) -> Result<()> {
             print_flat_findings(name.as_str(), &findings);
             return if findings.is_empty() { Ok(()) } else { bail!("{name} failed") };
         },
+        | "fn-length" => {
+            let findings = checks::fn_length::run(&repo_root, &config)?;
+            print_flat_findings(name.as_str(), &findings);
+            return if findings.is_empty() { Ok(()) } else { bail!("{name} failed") };
+        },
         | _ => bail!("toolkit-xtask: unknown check: {name}"),
     };
     print_findings(name.as_str(), &findings);

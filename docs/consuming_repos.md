@@ -360,6 +360,42 @@ entrypoint rather than trying to intercept raw `lake build`.
 6. Add `toolkit/toolkit.toml`.
 7. Point `just`, CI, and hooks at `./scripts/toolkit-shell.sh toolkit-...`.
 
+## Dependency Scanning with `cargo deny`
+
+Consuming repos should run `cargo deny check` in CI to enforce license and
+advisory vulnerability scanning. The toolkit's `ci_assurance_lanes` check can
+verify the recipe exists and invokes the right commands.
+
+### Setup
+
+1. Install `cargo-deny` (it is available in nixpkgs as `cargo-deny`; add it to
+   your dev shell's `nativeBuildInputs`).
+2. Create a `deny.toml` at the repo root. See
+   [cargo-deny documentation](https://embarkstudios.github.io/cargo-deny/) for
+   configuration options.
+3. Add a `deny` recipe to the consuming repo's `justfile`:
+
+```just
+deny:
+    cargo deny check advisories licenses
+```
+
+4. Wire a `ci_assurance_lanes` contract in `toolkit/toolkit.toml`:
+
+```toml
+[checks.ci_assurance_lanes]
+enabled = true
+justfile_path = "justfile"
+
+[[checks.ci_assurance_lanes.recipe_contracts]]
+recipe = "deny"
+required_literals = ["cargo deny check"]
+```
+
+This ensures the `deny` recipe is present and invokes `cargo deny check`. The
+specific `deny.toml` configuration (allowed licenses, advisory thresholds) is
+the consuming repo's responsibility.
+
 ## Repo-Local Dylint Requirements
 
 If the consuming repo adds its own `toolkit/lints/*` crates, those lint crates

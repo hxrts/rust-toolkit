@@ -12,6 +12,7 @@ pub mod docs_link_check;
 pub mod docs_semantic_drift;
 pub mod drop_side_effects;
 pub mod durable_boundaries;
+pub mod fn_length;
 pub mod formal_claim_scope;
 pub mod git_dependency_pins;
 pub mod ignored_result;
