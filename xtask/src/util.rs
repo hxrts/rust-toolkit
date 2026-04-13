@@ -1,10 +1,14 @@
 use std::{
     collections::BTreeSet,
+    fs,
     path::{Path, PathBuf},
     process::Command,
 };
 
 use anyhow::{bail, Context, Result};
+use regex::Regex;
+
+use crate::report::FlatFindingSet;
 
 #[derive(Clone)]
 pub struct ParsedSource {
@@ -59,6 +63,43 @@ pub fn collect_rust_policy_files(
         files.push(path);
     }
     Ok(files)
+}
+
+/// Scan a set of Rust source files for regex matches, reporting those that lack
+/// a preceding comment line containing `marker`. `lookahead` controls how many
+/// lines before the match are checked. `format_finding` receives
+/// `(rel_path, line_no, matched_text)` and returns the finding string.
+pub fn scan_with_marker<F>(
+    files: impl IntoIterator<Item = PathBuf>,
+    repo_root: &Path,
+    pattern: &Regex,
+    marker: &str,
+    lookahead: usize,
+    format_finding: F,
+) -> Result<FlatFindingSet>
+where
+    F: Fn(&str, usize, &str) -> String,
+{
+    let mut findings = FlatFindingSet::default();
+    for path in files {
+        let rel = normalize_rel_path(repo_root, &path);
+        let source = fs::read_to_string(&path)
+            .with_context(|| format!("reading {}", path.display()))?;
+        let masked = mask_rust_comments_and_literals(&source);
+        for matched in pattern.find_iter(&masked) {
+            let offset = matched.start();
+            let line_no = line_number_at(&source, offset);
+            let has_exemption = preceding_lines(&source, offset, lookahead)
+                .iter()
+                .any(|line| line.contains(marker));
+            if !has_exemption {
+                findings
+                    .entries
+                    .insert(format_finding(&rel, line_no, matched.as_str()));
+            }
+        }
+    }
+    Ok(findings)
 }
 
 pub fn normalize_rel_path(root: &Path, path: &Path) -> String {

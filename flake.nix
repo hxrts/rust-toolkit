@@ -32,10 +32,6 @@
             "rust-analyzer"
           ];
         };
-        rustToolchainFmt = pkgs.rust-bin.nightly.latest.default.override {
-          extensions = [ "rustfmt" ];
-        };
-
         rustToolchainNightly = pkgs.rust-bin.nightly.latest.default.override {
           extensions = [
             "rust-src"
@@ -139,7 +135,7 @@
           fi
 
           export RUSTFMT_CONFIG_PATH="$config_path"
-          exec ${rustToolchainFmt}/bin/cargo fmt "$@"
+          exec ${rustToolchainNightly}/bin/cargo fmt "$@"
         '';
 
         toolkitClippy = pkgs.writeShellScriptBin "toolkit-clippy" ''
