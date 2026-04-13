@@ -5,7 +5,7 @@ use std::{
 };
 
 use anyhow::{bail, Result};
-use jacquard_toolkit_xtask::{checks, config, legacy, report};
+use rust_toolkit_xtask::{checks, config, legacy, report};
 use report::FindingSet;
 
 const DEFAULT_CONFIG: &str = "toolkit/toolkit.toml";

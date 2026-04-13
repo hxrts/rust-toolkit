@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use jacquard_toolkit_xtask::{checks, config};
+use rust_toolkit_xtask::{checks, config};
 
 fn fixture_root(name: &str) -> std::path::PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -10,7 +10,7 @@ fn fixture_root(name: &str) -> std::path::PathBuf {
         .expect("fixture root")
 }
 
-fn fixture_config(repo_root: &Path) -> jacquard_toolkit_xtask::config::ToolkitConfig {
+fn fixture_config(repo_root: &Path) -> rust_toolkit_xtask::config::ToolkitConfig {
     config::load(&repo_root.join("toolkit.toml")).expect("fixture config")
 }
 

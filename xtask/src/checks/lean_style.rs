@@ -537,7 +537,7 @@ mod tests {
             .expect("time went backwards")
             .as_nanos();
         let dir = env::temp_dir().join(format!(
-            "jacquard-toolkit-lean-style-{label}-{}-{nonce}",
+            "rust-toolkit-lean-style-{label}-{}-{nonce}",
             std::process::id()
         ));
         fs::create_dir_all(&dir).expect("create temp dir");

@@ -126,7 +126,6 @@ const EXTERNAL_PREFIXES: &[&str] = &[
     "thiserror",
     "tracing",
     "proc_macro2",
-    "telltale",
 ];
 
 pub fn run(

@@ -1,7 +1,7 @@
 [workspace]
 
 [package]
-name = "jacquard-toolkit-xtask"
+name = "rust-toolkit-xtask"
 version = "0.2.0"
 edition = "2021"
 license = "Apache-2.0"
