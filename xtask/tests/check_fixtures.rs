@@ -182,6 +182,37 @@ fn fail_fixture_reports_expected_findings() {
         .iter()
         .any(|entry| entry.contains("default-features = false")
             || entry.contains("banned by toolkit dependency policy")));
+
+    let unwrap = checks::unwrap_guard::run(&repo_root, &cfg).unwrap();
+    assert!(unwrap
+        .entries
+        .iter()
+        .any(|entry| entry.contains("unwrap") && entry.contains("rationale comment")));
+
+    let allow_attr = checks::allow_attribute_guard::run(&repo_root, &cfg).unwrap();
+    assert!(allow_attr
+        .entries
+        .iter()
+        .any(|entry| entry.contains("#[allow(") && entry.contains("rationale comment")));
+
+    let doc_cov = checks::doc_coverage::run(&repo_root, &cfg).unwrap();
+    assert!(doc_cov
+        .entries
+        .iter()
+        .any(|entry| entry.contains("missing a doc comment")));
+
+    let cloning = checks::cloning_boundary::run(&repo_root, &cfg).unwrap();
+    assert!(cloning
+        .entries
+        .iter()
+        .any(|entry| entry.contains("cloning trait") && entry.contains("rationale comment")));
+
+    let fn_len = checks::fn_length::run(&repo_root, &cfg).unwrap();
+    assert!(fn_len
+        .entries
+        .iter()
+        .any(|entry| entry.contains("overly_long_function")
+            && entry.contains("lines")));
 }
 
 #[test]
@@ -268,6 +299,21 @@ fn pass_fixture_reports_no_findings() {
         .unwrap()
         .is_empty());
     assert!(checks::dependency_policy::run(&repo_root, &cfg)
+        .unwrap()
+        .is_empty());
+    assert!(checks::unwrap_guard::run(&repo_root, &cfg)
+        .unwrap()
+        .is_empty());
+    assert!(checks::allow_attribute_guard::run(&repo_root, &cfg)
+        .unwrap()
+        .is_empty());
+    assert!(checks::doc_coverage::run(&repo_root, &cfg)
+        .unwrap()
+        .is_empty());
+    assert!(checks::cloning_boundary::run(&repo_root, &cfg)
+        .unwrap()
+        .is_empty());
+    assert!(checks::fn_length::run(&repo_root, &cfg)
         .unwrap()
         .is_empty());
 }

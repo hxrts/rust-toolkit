@@ -158,6 +158,33 @@ enabled = true
 workflow_roots = [".github/workflows"]
 pin_comment_markers = ["pin"]
 
+[checks.unwrap_guard]
+enabled = true
+include_paths = ["crates"]
+allow_comment_marker = "unwrap-safe:"
+
+[checks.allow_attribute_guard]
+enabled = true
+include_paths = ["crates"]
+allow_comment_marker = "allow-lint:"
+
+[checks.doc_coverage]
+enabled = true
+include_paths = ["crates"]
+
+[checks.cloning_boundary]
+enabled = true
+include_paths = ["crates"]
+allow_comment_marker = "clone-allowed:"
+banned_derives = ["Clone"]
+
+[checks.fn_length]
+enabled = true
+include_paths = ["crates"]
+warn_lines = 60
+hard_lines = 100
+allow_comment_marker = "long-fn-exception:"
+
 [checks.lean_escape_hatches]
 enabled = true
 include_paths = ["lean"]
