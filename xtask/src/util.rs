@@ -93,9 +93,11 @@ where
                 .iter()
                 .any(|line| line.contains(marker));
             if !has_exemption {
-                findings
-                    .entries
-                    .insert(format_finding(&rel, line_no, matched.as_str()));
+                findings.entries.insert(format_finding(
+                    &rel,
+                    line_no,
+                    matched.as_str(),
+                ));
             }
         }
     }

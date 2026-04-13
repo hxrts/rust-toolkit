@@ -23,9 +23,11 @@ pub fn run(repo_root: &Path, config: &ToolkitConfig) -> Result<FlatFindingSet> {
     )?;
 
     let mut findings = FlatFindingSet::default();
-    for path in
-        collect_rust_policy_files(repo_root, &check.scan_roots, &check.exclude_path_parts)?
-    {
+    for path in collect_rust_policy_files(
+        repo_root,
+        &check.scan_roots,
+        &check.exclude_path_parts,
+    )? {
         let rel = normalize_rel_path(repo_root, &path);
         if check
             .exclude_prefixes

@@ -24,13 +24,23 @@ pub fn run(repo_root: &Path, config: &ToolkitConfig) -> Result<FlatFindingSet> {
         .collect::<Vec<_>>()
         .join("|");
     let derive_re = Regex::new(&format!(r"#\[derive\([^\]]*\b(?:{alts})\b"))?;
-    let files =
-        collect_rust_policy_files(repo_root, &check.include_paths, &check.exclude_path_parts)?;
+    let files = collect_rust_policy_files(
+        repo_root,
+        &check.include_paths,
+        &check.exclude_path_parts,
+    )?;
     let marker = &check.allow_comment_marker;
-    scan_with_marker(files, repo_root, &derive_re, marker, 3, |rel, line_no, _| {
-        format!(
+    scan_with_marker(
+        files,
+        repo_root,
+        &derive_re,
+        marker,
+        3,
+        |rel, line_no, _| {
+            format!(
             "{rel}:{line_no}: `#[derive(...)]` with a cloning trait requires a preceding \
              `{marker}` rationale comment"
         )
-    })
+        },
+    )
 }

@@ -74,7 +74,7 @@ fn contains_forbidden_emoji(line: &str) -> bool {
         || line.contains("⚠️")
         || line
             .chars()
-            .any(|ch| matches!(ch as u32, 0x1F300..=0x1F9FF | 0x1FA00..=0x1FAFF))
+            .any(|ch| matches!(ch as u32, 0x1F300..=0x1FAFF))
 }
 
 fn normalize_rel_path(root: &Path, path: &Path) -> String {

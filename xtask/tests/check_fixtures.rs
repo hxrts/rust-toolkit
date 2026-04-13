@@ -190,10 +190,13 @@ fn fail_fixture_reports_expected_findings() {
         .any(|entry| entry.contains("unwrap") && entry.contains("rationale comment")));
 
     let allow_attr = checks::allow_attribute_guard::run(&repo_root, &cfg).unwrap();
-    assert!(allow_attr
-        .entries
-        .iter()
-        .any(|entry| entry.contains("#[allow(") && entry.contains("rationale comment")));
+    assert!(
+        allow_attr
+            .entries
+            .iter()
+            .any(|entry| entry.contains("#[allow(")
+                && entry.contains("rationale comment"))
+    );
 
     let doc_cov = checks::doc_coverage::run(&repo_root, &cfg).unwrap();
     assert!(doc_cov
@@ -205,14 +208,17 @@ fn fail_fixture_reports_expected_findings() {
     assert!(cloning
         .entries
         .iter()
-        .any(|entry| entry.contains("cloning trait") && entry.contains("rationale comment")));
+        .any(|entry| entry.contains("cloning trait")
+            && entry.contains("rationale comment")));
 
     let fn_len = checks::fn_length::run(&repo_root, &cfg).unwrap();
-    assert!(fn_len
-        .entries
-        .iter()
-        .any(|entry| entry.contains("overly_long_function")
-            && entry.contains("lines")));
+    assert!(
+        fn_len
+            .entries
+            .iter()
+            .any(|entry| entry.contains("overly_long_function")
+                && entry.contains("lines"))
+    );
 }
 
 #[test]
@@ -313,7 +319,5 @@ fn pass_fixture_reports_no_findings() {
     assert!(checks::cloning_boundary::run(&repo_root, &cfg)
         .unwrap()
         .is_empty());
-    assert!(checks::fn_length::run(&repo_root, &cfg)
-        .unwrap()
-        .is_empty());
+    assert!(checks::fn_length::run(&repo_root, &cfg).unwrap().is_empty());
 }

@@ -18,8 +18,11 @@ pub fn run(repo_root: &Path, config: &ToolkitConfig) -> Result<FlatFindingSet> {
     }
     // Matches #[allow(...)] and #[expect(...)] (stabilised in Rust 1.81).
     let attr_re = Regex::new(r"#\[\s*(?:allow|expect)\s*\(")?;
-    let files =
-        collect_rust_policy_files(repo_root, &check.include_paths, &check.exclude_path_parts)?;
+    let files = collect_rust_policy_files(
+        repo_root,
+        &check.include_paths,
+        &check.exclude_path_parts,
+    )?;
     let marker = &check.allow_comment_marker;
     scan_with_marker(files, repo_root, &attr_re, marker, 3, |rel, line_no, _| {
         format!(

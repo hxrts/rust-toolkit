@@ -5,8 +5,8 @@ use std::{
 };
 
 use anyhow::{bail, Result};
-use rust_toolkit_xtask::{checks, config, legacy, report};
 use report::FindingSet;
+use rust_toolkit_xtask::{checks, config, legacy, report};
 
 const DEFAULT_CONFIG: &str = "toolkit/toolkit.toml";
 

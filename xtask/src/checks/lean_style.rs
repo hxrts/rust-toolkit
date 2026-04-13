@@ -334,9 +334,9 @@ fn declaration_spans(source: &str) -> Result<Vec<DeclarationSpan>> {
 
     for (idx, (start_line, header)) in starts.iter().enumerate() {
         let mut end_line = lines.len();
-        for line_idx in *start_line..lines.len() {
-            let trimmed = lines[line_idx].trim_start();
-            let leading_ws = lines[line_idx].len() - trimmed.len();
+        for (line_idx, line) in lines.iter().enumerate().skip(*start_line) {
+            let trimmed = line.trim_start();
+            let leading_ws = line.len() - trimmed.len();
             if leading_ws == 0
                 && (trimmed.starts_with("/-! ## ")
                     || trimmed.starts_with("/-! ### ")
