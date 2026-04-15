@@ -120,6 +120,8 @@ pub fn rust_policy_path_excluded(
         || rel_path.contains("/examples/")
         || rel_path.ends_with("/build.rs")
         || rel_path.contains("/target/")
+        || rel_path.contains("/toolkit/")
+        || rel_path.starts_with("toolkit/")
         || exclude_path_parts
             .iter()
             .any(|part| !part.is_empty() && rel_path.contains(part))
