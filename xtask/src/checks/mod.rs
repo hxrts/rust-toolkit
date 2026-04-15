@@ -1,4 +1,5 @@
 pub mod allow_attribute_guard;
+pub mod annotation_scope;
 pub mod assert_shape;
 pub mod bool_param;
 pub mod ci_assurance_lanes;

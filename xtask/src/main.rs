@@ -236,6 +236,11 @@ fn run_check(args: &[String]) -> Result<()> {
             print_flat_findings(name.as_str(), &findings);
             return if findings.is_empty() { Ok(()) } else { bail!("{name} failed") };
         },
+        | "annotation-scope" => {
+            let findings = checks::annotation_scope::run(&repo_root, &config)?;
+            print_flat_findings(name.as_str(), &findings);
+            return if findings.is_empty() { Ok(()) } else { bail!("{name} failed") };
+        },
         | _ => bail!("toolkit-xtask: unknown check: {name}"),
     };
     print_findings(name.as_str(), &findings);

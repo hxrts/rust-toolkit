@@ -185,6 +185,14 @@ warn_lines = 60
 hard_lines = 100
 allow_comment_marker = "long-fn-exception:"
 
+[checks.annotation_scope]
+enabled = true
+include_paths = ["crates"]
+
+[[checks.annotation_scope.rules]]
+annotation = "#[public_model]"
+allowed_item_kinds = ["struct", "enum", "fn"]
+
 [checks.lean_escape_hatches]
 enabled = true
 include_paths = ["lean"]

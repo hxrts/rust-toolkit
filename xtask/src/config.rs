@@ -68,6 +68,7 @@ pub struct ChecksConfig {
     pub doc_coverage: Option<DocCoverageConfig>,
     pub cloning_boundary: Option<CloningBoundaryConfig>,
     pub fn_length: Option<FnLengthConfig>,
+    pub annotation_scope: Option<AnnotationScopeConfig>,
     pub extra: BTreeMap<String, toml::Value>,
 }
 
@@ -364,6 +365,22 @@ pub struct FnLengthConfig {
 }
 
 #[derive(Debug, Clone)]
+pub struct AnnotationScopeConfig {
+    pub enabled: bool,
+    pub include_paths: Vec<String>,
+    pub exclude_path_parts: Vec<String>,
+    pub rules: Vec<AnnotationScopeRule>,
+}
+
+#[derive(Debug, Clone)]
+pub struct AnnotationScopeRule {
+    pub annotation: String,
+    pub allowed_paths: Vec<String>,
+    pub forbidden_paths: Vec<String>,
+    pub allowed_item_kinds: Vec<String>,
+}
+
+#[derive(Debug, Clone)]
 pub struct WorkflowActionsConfig {
     pub enabled: bool,
     pub workflow_roots: Vec<String>,
@@ -556,6 +573,10 @@ fn parse_checks_config(value: &toml::Value) -> Result<ChecksConfig> {
         .get("fn_length")
         .map(parse_fn_length_config)
         .transpose()?;
+    let annotation_scope = table
+        .get("annotation_scope")
+        .map(parse_annotation_scope_config)
+        .transpose()?;
 
     let mut extra = BTreeMap::new();
     for (key, value) in table {
@@ -597,6 +618,7 @@ fn parse_checks_config(value: &toml::Value) -> Result<ChecksConfig> {
                 | "doc_coverage"
                 | "cloning_boundary"
                 | "fn_length"
+                | "annotation_scope"
         ) {
             continue;
         }
@@ -640,6 +662,7 @@ fn parse_checks_config(value: &toml::Value) -> Result<ChecksConfig> {
         doc_coverage,
         cloning_boundary,
         fn_length,
+        annotation_scope,
         extra,
     })
 }
@@ -1036,6 +1059,30 @@ fn parse_dependency_policy_config(
             "require_default_features_false",
         )?,
         banned_dependencies: optional_string_list(table, "banned_dependencies")?,
+    })
+}
+
+fn parse_annotation_scope_config(value: &toml::Value) -> Result<AnnotationScopeConfig> {
+    let table = expect_table(value, "checks.annotation_scope")?;
+    Ok(AnnotationScopeConfig {
+        enabled: required_bool(table, "enabled")?,
+        include_paths: required_string_list(table, "include_paths")?,
+        exclude_path_parts: optional_string_list(table, "exclude_path_parts")?,
+        rules: optional_table_array(table, "rules")?
+            .into_iter()
+            .map(parse_annotation_scope_rule)
+            .collect::<Result<Vec<_>>>()?,
+    })
+}
+
+fn parse_annotation_scope_rule(
+    table: &toml::map::Map<String, toml::Value>,
+) -> Result<AnnotationScopeRule> {
+    Ok(AnnotationScopeRule {
+        annotation: required_string(table, "annotation")?,
+        allowed_paths: optional_string_list(table, "allowed_paths")?,
+        forbidden_paths: optional_string_list(table, "forbidden_paths")?,
+        allowed_item_kinds: optional_string_list(table, "allowed_item_kinds")?,
     })
 }
 

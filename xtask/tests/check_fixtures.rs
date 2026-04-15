@@ -219,6 +219,13 @@ fn fail_fixture_reports_expected_findings() {
             .any(|entry| entry.contains("overly_long_function")
                 && entry.contains("lines"))
     );
+
+    let annot = checks::annotation_scope::run(&repo_root, &cfg).unwrap();
+    assert!(annot
+        .entries
+        .iter()
+        .any(|entry| entry.contains("public_model")
+            && entry.contains("not allowed on fn")));
 }
 
 #[test]
@@ -320,4 +327,7 @@ fn pass_fixture_reports_no_findings() {
         .unwrap()
         .is_empty());
     assert!(checks::fn_length::run(&repo_root, &cfg).unwrap().is_empty());
+    assert!(checks::annotation_scope::run(&repo_root, &cfg)
+        .unwrap()
+        .is_empty());
 }

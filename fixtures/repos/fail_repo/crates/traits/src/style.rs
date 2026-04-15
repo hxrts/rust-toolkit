@@ -38,6 +38,10 @@ pub fn unchecked_unsafe() -> u8 {
     unsafe { std::ptr::read(std::ptr::null::<u8>()) }
 }
 
+// --- annotation_scope violation: #[public_model] on a function (only allowed on struct/enum) ---
+#[public_model]
+pub fn wrongly_annotated() {}
+
 // --- unwrap_guard violation: bare unwrap without marker ---
 pub fn unwrap_violation() -> u32 {
     let value: Option<u32> = Some(42);

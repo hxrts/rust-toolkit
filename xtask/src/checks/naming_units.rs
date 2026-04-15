@@ -12,8 +12,8 @@ use crate::{
 const TIME_NAMES: &[&str] =
     &["timeout", "latency", "backoff", "interval", "duration", "ttl"];
 const TIME_SUFFIXES: &[&str] = &[
-    "_ns", "_us", "_ms", "_s", "_ticks", "_slots", "_epochs", "_rounds",
-    "_steps", "_cycles",
+    "_ns", "_us", "_ms", "_s", "_ticks", "_slots", "_epochs", "_rounds", "_steps",
+    "_cycles",
 ];
 
 pub fn run(repo_root: &Path, config: &ToolkitConfig) -> Result<FlatFindingSet> {
