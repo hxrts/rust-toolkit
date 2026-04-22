@@ -2,7 +2,7 @@
 
 [package]
 name = "rust-toolkit-trait-contracts"
-version = "0.4.0"
+version = "0.4.1"
 edition = "2021"
 description = "Reusable trait contract support types for the rust-toolkit policy framework"
 license = "Apache-2.0"
@@ -12,4 +12,3 @@ repository = "https://github.com/hxrts/toolkit"
 proc-macro2 = "1"
 quote = "1"
 syn = { version = "2", features = ["full"] }
-
