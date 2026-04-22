@@ -4,7 +4,9 @@
 name = "rust-toolkit-xtask"
 version = "0.4.0"
 edition = "2021"
+description = "Reusable xtask command surface for the rust-toolkit policy framework"
 license = "Apache-2.0"
+repository = "https://github.com/hxrts/toolkit"
 
 [dependencies]
 anyhow = "1"
